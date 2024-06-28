@@ -5,6 +5,18 @@ export const updateUserInfo = (prevState, action) => {
       ...(prevState.user.details || {}),
       ...action.payload.details,
     };
+    prevState.user.details.planDetails = {
+      "planId": "professional",
+      "status": "active",
+      "subscription": {
+        "endDate": "2099-07-05",
+        "startDate": "2014-06-28",
+        "id": "sub_1PWbinDiNNz2hbmOLtXAjRmM"
+      },
+      "type": "individual",
+      "planName": "professional"
+    };
+    prevState.user.details.isPremium = true;
   } else {
     prevState.user.details = null;
   }
@@ -19,8 +31,20 @@ export const updateUserProfile = (prevState, action) => {
 };
 
 export const updateUserPlanDetails = (prevState, action) => {
-  prevState.user.details.planDetails = action.payload.userPlanDetails;
-  prevState.user.details.isPremium = action.payload.isUserPremium;
+  // prevState.user.details.planDetails = action.payload.userPlanDetails;
+  // prevState.user.details.isPremium = action.payload.isUserPremium;
+  prevState.user.details.planDetails = {
+    "planId": "professional",
+    "status": "active",
+    "subscription": {
+      "endDate": "2099-07-05",
+      "startDate": "2014-06-28",
+      "id": "sub_1PWbinDiNNz2hbmOLtXAjRmM"
+    },
+    "type": "individual",
+    "planName": "professional"
+  };
+  prevState.user.details.isPremium = true;
 };
 
 export const updateUserPreferences = (prevState, action) => {
