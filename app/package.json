@@ -37,6 +37,9 @@
   "eslintConfig": {
     "extends": "react-app"
   },
+  "engines": {
+    "node": "16.x"
+  },
   "dependencies": {
     "@amplitude/analytics-browser": "^1.12.1",
     "@ant-design/icons": "^4.7.0",
