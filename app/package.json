@@ -38,7 +38,7 @@
     "extends": "react-app"
   },
   "engines": {
-    "node": "16.x"
+    "node": "18.x"
   },
   "dependencies": {
     "@amplitude/analytics-browser": "^1.12.1",
