@@ -9,15 +9,22 @@ import Page404 from "views/misc/ServerResponses/404";
 import AcceptTeamInvite from "components/user/Teams/AcceptTeamInvite";
 import ProtectedRoute from "components/authentication/ProtectedRoute";
 import AppSumoModal from "components/landing/Appsumo/Appsumo";
-import { ImportFromCharlesWrapperView } from "components/features/rules/ImportFromCharlesModal";
 import { Home } from "components/Home";
 import { PricingIndexPage } from "features/pricing/components/PricingPage";
 import { IncentiveTasksListScreen } from "features/incentivization";
+import { ImportFromCharlesWrapperView } from "features/rules/screens/rulesList/components/RulesList/components";
+import { ImportFromModheaderWrapperView } from "features/rules/screens/rulesList/components/RulesList/components/ImporterComponents/ModheaderImporter/ImportFromModheaderScreen";
+import SeleniumImporter from "views/misc/SeleniumImporter";
+import APISecurityLanding from "views/features/api-security-testing/APISecurityLanding";
 
 export const miscRoutes: RouteObject[] = [
   {
     path: PATHS.EXTENSION_INSTALLED.RELATIVE,
     element: <ExtensionInstalled />,
+  },
+  {
+    path: PATHS.API_SECURITY_TESTING.RELATIVE,
+    element: <APISecurityLanding />,
   },
   {
     path: PATHS.EXTENSION_UPDATED.RELATIVE,
@@ -61,6 +68,10 @@ export const miscRoutes: RouteObject[] = [
     element: <ImportFromCharlesWrapperView />,
   },
   {
+    path: PATHS.IMPORT_FROM_MODHEADER.RELATIVE,
+    element: <ImportFromModheaderWrapperView />,
+  },
+  {
     path: PATHS.HOME.RELATIVE,
     element: <Home />,
   },
@@ -71,6 +82,10 @@ export const miscRoutes: RouteObject[] = [
   {
     path: PATHS.CREDITS.RELATIVE,
     element: <IncentiveTasksListScreen />,
+  },
+  {
+    path: PATHS.SELENIUM_IMPORTER.RELATIVE,
+    element: <SeleniumImporter />,
   },
   {
     path: PATHS.ANY,

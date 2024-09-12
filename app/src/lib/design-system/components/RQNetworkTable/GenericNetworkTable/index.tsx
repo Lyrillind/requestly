@@ -47,6 +47,10 @@ export interface GenericNetworkTableProps<NetworkLog> {
   tableRef?: RefObject<HTMLDivElement>;
 
   onTableScroll?: UIEventHandler<HTMLElement>;
+
+  disableFilters?: boolean;
+
+  onRowClick?: (log: NetworkLog) => void;
 }
 
 /**
@@ -65,6 +69,8 @@ export const GenericNetworkTable = <NetworkLog,>({
   autoScroll = false,
   tableRef,
   onTableScroll,
+  disableFilters = false,
+  onRowClick,
 }: GenericNetworkTableProps<NetworkLog>): ReactElement => {
   const [, setSelectedLog] = useState<NetworkLog | null>(null);
   const [filters, setFilters] = useState<NetworkFilters>({ search: "", method: [], statusCode: [] });
@@ -120,9 +126,17 @@ export const GenericNetworkTable = <NetworkLog,>({
     [networkEntrySelector, filters.search, statusCodeFilter, methodsFilter]
   );
 
+  const handleRowClick = useCallback(
+    (log: NetworkLog) => {
+      setSelectedLog(log);
+      onRowClick?.(log);
+    },
+    [onRowClick, setSelectedLog]
+  );
+
   return (
     <div className="network-container">
-      <FiltersToolbar filters={filters} setFilters={setFilters} />
+      <FiltersToolbar filters={filters} setFilters={setFilters} disabled={disableFilters} />
       <div className="rq-resource-table-wrapper">
         <ResourceTable
           resources={logs}
@@ -131,7 +145,7 @@ export const GenericNetworkTable = <NetworkLog,>({
           detailsTabs={finalDetailsTabs}
           primaryColumnKeys={["timeOffset", "url"]}
           colorScheme={ColorScheme.DARK}
-          onRowSelection={setSelectedLog}
+          onRowSelection={handleRowClick}
           contextMenuOptions={contextMenuOptions}
           filter={filterLog}
           emptyView={emptyView}

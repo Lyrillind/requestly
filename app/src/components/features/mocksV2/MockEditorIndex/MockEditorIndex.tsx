@@ -1,7 +1,8 @@
 import SpinnerColumn from "components/misc/SpinnerColumn";
 import React, { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
+  navigateBack,
   redirectToFileMockEditorEditMock,
   redirectToFileMocksList,
   redirectToMockEditorEditMock,
@@ -46,6 +47,7 @@ const MockEditorIndex: React.FC<Props> = ({
   const { mockId } = useParams();
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
   const userAttributes = useSelector(getUserAttributes);
   const user = useSelector(getUserAuthDetails);
   const uid = user?.details?.profile?.uid;
@@ -59,6 +61,8 @@ const MockEditorIndex: React.FC<Props> = ({
   const [isMockCollectionLoading, setIsMockCollectionLoading] = useState<boolean>(false);
 
   const { claimIncentiveRewards } = useIncentiveActions();
+  const [searchParams] = useSearchParams();
+  const collectionId = searchParams.get("collectionId") || "";
 
   useEffect(() => {
     if (!mockId) {
@@ -95,14 +99,14 @@ const MockEditorIndex: React.FC<Props> = ({
       .finally(() => {
         setIsMockCollectionLoading(false);
       });
-  }, [mockEditorData?.collectionId]);
+  }, [mockEditorData?.collectionId, teamId, uid]);
 
   const onMockSave = (data: MockEditorDataSchema) => {
     setSavingInProgress(true);
 
     const finalMockData = editorDataToMockDataConverter(data);
     if (isNew) {
-      return createMock(uid, finalMockData, teamId).then((mockId) => {
+      return createMock(uid, { ...finalMockData, collectionId }, teamId).then((mockId) => {
         setSavingInProgress(false);
         if (mockId) {
           toast.success("Mock Created Successfully");
@@ -143,9 +147,9 @@ const MockEditorIndex: React.FC<Props> = ({
             return;
           }
           if (mockType === MockType.FILE) {
-            return redirectToFileMockEditorEditMock(navigate, mockId);
+            return redirectToFileMockEditorEditMock(navigate, mockId, true);
           }
-          return redirectToMockEditorEditMock(navigate, mockId);
+          return redirectToMockEditorEditMock(navigate, mockId, true);
         }
         toast.error("Mock Create Error");
       });
@@ -166,10 +170,10 @@ const MockEditorIndex: React.FC<Props> = ({
 
   const handleOnClose = () => {
     if (mockType === MockType.FILE) {
-      return redirectToFileMocksList(navigate);
+      return navigateBack(navigate, location, () => redirectToFileMocksList(navigate));
     }
 
-    return redirectToMocksList(navigate);
+    return navigateBack(navigate, location, () => redirectToMocksList(navigate));
   };
 
   if (isNew) {

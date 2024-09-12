@@ -34,6 +34,7 @@ const INITIAL_STATE = {
       data: false,
       config: false,
       hasUnsavedChanges: false,
+      showDetailsPanel: true,
       errors: {},
     },
     rulesToPopulate: [],
@@ -42,6 +43,7 @@ const INITIAL_STATE = {
     selectedGroups: {},
     lastBackupTimeStamp: "",
     isRulesListLoading: false,
+    isSampleRulesImported: false,
   },
 
   /* Search */
@@ -175,6 +177,7 @@ const INITIAL_STATE = {
   appOnboarding: {
     step: "auth",
     persona: null,
+    industry: null,
     disableSkip: false,
     createdWorkspace: null,
     isOnboardingCompleted: false,
@@ -192,23 +195,26 @@ const INITIAL_STATE = {
       isConnectedAppsTourCompleted: false,
       isNetworkSessionTooltipShown: false,
       isRuleEditorTourCompleted: false,
+      isCodeEditorFullScreenModeOnboardingCompleted: false,
       extensionInstallSource: null,
       isMiscTourCompleted: {
         firstDraftSession: false,
-        askAI: false,
-        earnCredits: false,
+        testThisRule: false,
         upgradeWorkspaceMenu: false,
       },
 
       hasConnectedApp: false,
       lastSeenInviteTs: 0,
       isJoinWorkspaceCardVisible: true,
+      isManageBillingTeamAlertVisible: true,
+      isSupportChatOpened: false,
     },
     nonPersist: {
       networkSessionSaveInProgress: false, // todo: check if requried
       timeToResendEmailLogin: 0,
       isCommandBarOpen: false,
       isAppBannerVisible: false,
+      requestBot: { isActive: false, modelType: "app" },
     },
   },
 };

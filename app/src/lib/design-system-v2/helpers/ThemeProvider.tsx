@@ -7,6 +7,7 @@ import { TypographyTokens, generateTypographyTokens } from "../tokens/typography
 interface ThemeProviderProps {
   children: React.ReactNode;
   primaryColor?: string;
+  secondaryColor?: string;
   neutralColor?: string;
 }
 
@@ -15,8 +16,8 @@ export interface Theme {
   typography: TypographyTokens;
 }
 
-export const generateTheme = (primaryColor?: string, neutralColor?: string) => {
-  const colorTokens = generateColorTokens(primaryColor, neutralColor);
+const generateTheme = (primaryColor?: string, secondaryColor?: string, neutralColor?: string) => {
+  const colorTokens = generateColorTokens(primaryColor, secondaryColor, neutralColor);
   const colorCssVariables = generateCSSVariables(colorTokens, "requestly-color-");
 
   const typographyTokens = generateTypographyTokens();
@@ -35,8 +36,12 @@ export const generateTheme = (primaryColor?: string, neutralColor?: string) => {
   return { theme, themeCssVariables };
 };
 
-const ThemeProvider: React.FC<ThemeProviderProps> = ({ children, primaryColor, neutralColor }) => {
-  const { theme, themeCssVariables } = generateTheme(primaryColor, neutralColor);
+// Temp generated theme. Main theme generated in ThemeProvider
+export let { theme } = generateTheme();
+
+const ThemeProvider: React.FC<ThemeProviderProps> = ({ children, primaryColor, secondaryColor, neutralColor }) => {
+  const { theme: _theme, themeCssVariables } = generateTheme(primaryColor, secondaryColor, neutralColor);
+  theme = _theme;
 
   // Paste the output in ./theme.css files for autocompletion
   // console.log(`:root {
@@ -44,6 +49,7 @@ const ThemeProvider: React.FC<ThemeProviderProps> = ({ children, primaryColor, n
   //     .map(([key, value]) => `${key}: ${value};`)
   //     .join("\n")}
   // }`);
+
   const GlobalStyles = createGlobalStyle`
     :root {
       ${Object.entries(themeCssVariables)

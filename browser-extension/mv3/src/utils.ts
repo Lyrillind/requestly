@@ -2,6 +2,8 @@ import { SourceKey, SourceOperator, UrlSource } from "common/types";
 import config from "common/config";
 import { matchSourceUrl } from "./common/ruleMatcher";
 import { Variable, getVariable } from "./service-worker/variable";
+import { ChangeType, getRecord, onRecordChange } from "common/storage";
+import { STORAGE_KEYS } from "common/constants";
 
 export const formatDate = (dateInMillis: number, format: string): string => {
   if (dateInMillis && format === "yyyy-mm-dd") {
@@ -66,4 +68,57 @@ export const getUrlObject = (url: string): URL | undefined => {
 
 export const isExtensionEnabled = async (): Promise<boolean> => {
   return await getVariable<boolean>(Variable.IS_EXTENSION_ENABLED, true);
+};
+
+export const debounce = (func: Function, wait: number) => {
+  let timeout: NodeJS.Timeout;
+
+  return function (...args: any[]) {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func(...args), wait);
+  };
+};
+
+let cachedBlockedDomains: string[] | null = null;
+
+export const cacheBlockedDomains = async () => {
+  const blockedDomains = await getRecord<string[]>(STORAGE_KEYS.BLOCKED_DOMAINS);
+  cachedBlockedDomains = blockedDomains ?? [];
+};
+
+export const getBlockedDomains = async () => {
+  if (cachedBlockedDomains) {
+    return cachedBlockedDomains;
+  }
+
+  await cacheBlockedDomains();
+  return cachedBlockedDomains;
+};
+
+export const isUrlInBlockList = async (url: string) => {
+  const blockedDomains = await getBlockedDomains();
+  return blockedDomains?.some((domain) => {
+    return matchSourceUrl(
+      {
+        key: SourceKey.HOST,
+        value: `/^(.+\.)?${domain}$/i`, // to match the domain and all its subdomains
+        operator: SourceOperator.MATCHES,
+      },
+      url
+    );
+  });
+};
+
+export const onBlockListChange = (callback: () => void) => {
+  onRecordChange<string[]>(
+    {
+      keyFilter: STORAGE_KEYS.BLOCKED_DOMAINS,
+      changeTypes: [ChangeType.MODIFIED],
+    },
+    () => {
+      cacheBlockedDomains().then(() => {
+        callback?.();
+      });
+    }
+  );
 };

@@ -1,3 +1,12 @@
+.onboarding-auth-form-container {
+  .variant3 {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+  }
+}
+
 .onboarding-auth-form-header {
   font-size: 20px;
   font-weight: 500;
@@ -6,13 +15,20 @@
 }
 
 .onboarding-auth-mode-switch-wrapper {
-  font-size: 13px;
+  font-size: var(--requestly-font-size-sm, 13px);
   color: var(--text-light);
 
   .onboarding-auth-mode-switcher {
     text-decoration: underline;
     cursor: pointer;
     margin-left: 4px;
+  }
+
+  &.variant3 {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 24px;
   }
 }
 
@@ -50,13 +66,13 @@
 
 .why-work-email {
   color: var(--text-light);
-  font-size: 11px;
+  font-size: var(--requestly-font-size-xs, 11px);
 }
 
 .onboarding-form-input {
   & label {
     font-weight: 500;
-    font-size: 13px;
+    font-size: var(--requestly-font-size-sm, 13px);
   }
   & input::placeholder {
     font-weight: 500;
@@ -71,13 +87,13 @@
 }
 
 .persona-input-byline {
-  font-size: 11px;
+  font-size: var(--requestly-font-size-xs, 11px);
   color: var(--neutrals-gray-300);
   margin-top: 4px;
 }
 
 .onboarding-terms-text {
-  font-size: 11px;
+  font-size: var(--requestly-font-size-xs, 11px);
   color: var(--text-light);
   margin-top: 1rem;
   & a {
@@ -122,7 +138,6 @@
 
 .auth-email-disposable-error {
   color: var(--requestly-color-error-300);
-  font-family: var(--text-default);
   font-size: var(--requestly-font-size-xs);
   font-style: normal;
   font-weight: var(--requestly-font-weight-normal);

@@ -20,7 +20,7 @@
 }
 
 .layout-header-signup-btn.ant-btn {
-  font-size: 13px;
+  font-size: var(--requestly-font-size-sm, 13px);
 }
 
 .header-left-section {
@@ -33,7 +33,7 @@
 .header-left-section a {
   height: 30px;
   flex-shrink: 0;
-  font-size: 13px;
+  font-size: var(--requestly-font-size-sm, 13px);
   line-height: 22px;
   padding: 4px 11px;
   color: var(--white);
@@ -57,7 +57,7 @@
 
 .header-middle-section {
   margin: 8px;
-  font-size: 13px;
+  font-size: var(--requestly-font-size-sm, 13px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -178,6 +178,7 @@
 .github-star-button span {
   display: flex;
   align-items: center;
+  margin-right: 0.3rem;
 }
 
 .header-profile-dropdown-trigger.ant-avatar {
@@ -211,6 +212,12 @@
   align-items: center;
   gap: 6px;
   z-index: 2;
+  color: 1px solid var(--requestly-color-white);
+}
+
+.ask-ai-btn-content svg {
+  width: 17px;
+  height: 17px;
 }
 
 .ask-ai-btn.ant-btn.ant-btn-default {
@@ -254,6 +261,10 @@
 
 .signup-btn-popover.ant-tooltip-placement-bottom {
   padding-top: 0;
+}
+
+.header-profile-dropdown .ant-dropdown-menu-item-disabled {
+  display: none;
 }
 
 @media screen and (max-width: 1300px) {

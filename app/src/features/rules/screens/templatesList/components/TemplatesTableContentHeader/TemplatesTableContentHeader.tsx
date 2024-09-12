@@ -14,7 +14,9 @@ export const TemplatesTableContentHeader: React.FC<TemplatesTableContentHeaderPr
   return (
     <>
       <div className="templates-table-breadcrumb">
-        <span className="breadcrumb-1">Rules</span> {" > "} <span className="breadcrumb-2">Templates</span>
+        <div>
+          <span className="breadcrumb-1">Rules</span> {" > "} <span className="breadcrumb-2">Templates</span>
+        </div>
       </div>
       <ContentListHeader searchValue={searchValue} setSearchValue={handleSearchValueUpdate} />
     </>

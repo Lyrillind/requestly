@@ -3,6 +3,8 @@ import { MODES } from "components/misc/VerifyEmail/modes";
 import APP_CONSTANTS from "../config/constants";
 import { isFeatureCompatible } from "./CompatibilityUtils";
 import FEATURES from "config/constants/sub/features";
+import { getAppFlavour } from "./AppUtils";
+import { CONSTANTS as GLOBAL_CONSTANTS } from "@requestly/requestly-core";
 
 //CONSTANTS
 const { PATHS, LINKS } = APP_CONSTANTS;
@@ -44,12 +46,28 @@ export const redirectToCreateRuleEditor = (navigate, rule) => {
 };
 
 /* FEATURE - RULES - Edit a Rule */
-export const redirectToRuleEditor = (navigate, ruleId, source, newTab = false) => {
+/**
+ * Redirects the user to the rule editor for a specific rule.
+ *
+ * @param {function} navigate - The navigation function from react-router.
+ * @param {string} ruleId - The ID of the rule to edit.
+ * @param {string} source - The source of the navigation (for analytics or state management).
+ * @param {boolean} [newTab=false] - If true, opens the rule editor in a new tab.
+ * @param {boolean} [replaceCurrentRouteInHistory=false] - If true, replaces the current route in history instead of adding a new one.
+ */
+export const redirectToRuleEditor = (
+  navigate,
+  ruleId,
+  source,
+  newTab = false,
+  replaceCurrentRouteInHistory = false
+) => {
   if (newTab) {
     window.open(`${PATHS.RULE_EDITOR.EDIT_RULE.ABSOLUTE}/${ruleId}`, "_blank");
   } else {
     navigate(`${PATHS.RULE_EDITOR.EDIT_RULE.ABSOLUTE}/${ruleId}`, {
       state: { source },
+      replace: replaceCurrentRouteInHistory,
     });
   }
 };
@@ -118,7 +136,12 @@ export const redirectToSavedSession = (navigate, id) => {
 };
 
 export const redirectToSessionSettings = (navigate, redirectUrl, source) => {
-  navigate(PATHS.SETTINGS.SESSION_BOOK.ABSOLUTE, { state: { redirectUrl, source } });
+  const appFlavour = getAppFlavour();
+  if (appFlavour === GLOBAL_CONSTANTS.APP_FLAVOURS.SESSIONBEAR) {
+    navigate(PATHS.SETTINGS.SESSIONS_SETTINGS.ABSOLUTE, { state: { redirectUrl, source } });
+  } else {
+    navigate(PATHS.SETTINGS.SESSION_BOOK.ABSOLUTE, { state: { redirectUrl, source } });
+  }
 };
 
 export const redirectToNetworkSessionHome = (navigate, isDesktopSessionsCompatible = false) => {
@@ -134,16 +157,16 @@ export const redirectToNetworkSessionHome = (navigate, isDesktopSessionsCompatib
 export const redirectToNetworkSession = (navigate, id, isDesktopSessionsCompatible = false) => {
   if (isDesktopSessionsCompatible) {
     if (id) {
-      const path = PATHS.SESSIONS.DESKTOP.NETWORK.ABSOLUTE + `/${id}`;
+      const path = "/" + PATHS.SESSIONS.DESKTOP.NETWORK.RELATIVE + `/${id}`;
       navigate(path);
       return;
     }
-    const path = PATHS.SESSIONS.DESKTOP.NETWORK.ABSOLUTE;
+    const path = "/" + PATHS.SESSIONS.DESKTOP.NETWORK.RELATIVE;
     navigate(path);
     return;
   } else {
     if (id) {
-      const path = PATHS.NETWORK_LOGS.VIEWER.RELATIVE + `/${id}`;
+      const path = "/" + PATHS.NETWORK_LOGS.VIEWER.RELATIVE + `/${id}`;
       navigate(path);
       return;
     }
@@ -155,7 +178,7 @@ export const redirectToNetworkSession = (navigate, id, isDesktopSessionsCompatib
 
 /* Settings */
 export const redirectToSettings = (navigate, redirectUrl, source) => {
-  navigate(PATHS.SETTINGS.GLOBAL_SETTINGS.ABSOLUTE, { state: { redirectUrl, source } });
+  navigate(PATHS.SETTINGS.ABSOLUTE, { state: { redirectUrl, source } });
 };
 
 export const redirectToGlobalSettings = (navigate, redirectUrl, source) => {
@@ -444,27 +467,55 @@ export const redirectToDownloadPage = () => {
   window.open(APP_CONSTANTS.LINKS.REQUESTLY_DOWNLOAD_PAGE, "_blank");
 };
 
-export const redirectToMockEditorEditMock = (navigate, mockId) => {
+/**
+ * Redirects to the mock editor for editing an existing mock.
+ *
+ * @param {function} navigate - The navigation function from react-router.
+ * @param {string} mockId - The ID of the mock to edit.
+ * @param {boolean} [replaceCurrentRouteInHistory=false] - If true, replaces the current route in history instead of adding a new one.
+ */
+export const redirectToMockEditorEditMock = (navigate, mockId, replaceCurrentRouteInHistory = false) => {
   const mockEditUrl = `${PATHS.MOCK_SERVER_V2.EDIT.ABSOLUTE}`.replace(":mockId", mockId);
-  navigate(mockEditUrl);
+  navigate(mockEditUrl, { replace: replaceCurrentRouteInHistory });
 };
 
-export const redirectToFileMockEditorEditMock = (navigate, mockId) => {
+/**
+ * Redirects to the file mock editor for editing an existing file mock.
+ *
+ * @param {function} navigate - The navigation function from react-router.
+ * @param {string} mockId - The ID of the file mock to edit.
+ * @param {boolean} [replaceCurrentRouteInHistory=false] - If true, replaces the current route in history instead of adding a new one.
+ */
+export const redirectToFileMockEditorEditMock = (navigate, mockId, replaceCurrentRouteInHistory = false) => {
   const mockEditUrl = `${PATHS.FILE_SERVER_V2.EDIT.ABSOLUTE}`.replace(":mockId", mockId);
-  navigate(mockEditUrl);
+  navigate(mockEditUrl, { replace: replaceCurrentRouteInHistory });
 };
 
-export const redirectToMockEditorCreateMock = (navigate, newTab = false) => {
+export const redirectToMockEditorCreateMock = (navigate, newTab = false, collectionId = "") => {
+  const URL = collectionId
+    ? `${PATHS.MOCK_SERVER_V2.CREATE.ABSOLUTE}?collectionId=${collectionId}`
+    : PATHS.MOCK_SERVER_V2.CREATE.ABSOLUTE;
+
   if (newTab) {
-    window.open(PATHS.MOCK_SERVER_V2.CREATE.ABSOLUTE, "_blank");
+    window.open(URL, "_blank");
     return;
   }
-  navigate(PATHS.MOCK_SERVER_V2.CREATE.ABSOLUTE);
+
+  navigate(URL);
 };
 
-export const redirectToFileMockEditorCreateMock = (navigate, fileType) => {
-  const queryParam = fileType ? "file_type=" + fileType : "";
-  navigate(`${PATHS.FILE_SERVER_V2.CREATE.ABSOLUTE}?${queryParam}`);
+export const redirectToFileMockEditorCreateMock = (navigate, fileType, collectionId = "") => {
+  const queryParams = new URLSearchParams();
+
+  if (fileType) {
+    queryParams.set("file_type", fileType);
+  }
+
+  if (collectionId) {
+    queryParams.set("collectionId", collectionId);
+  }
+
+  navigate(`${PATHS.FILE_SERVER_V2.CREATE.ABSOLUTE}?${queryParams.toString()}`);
 };
 
 export const redirectToMocksList = (navigate, newTab = false) => {
@@ -484,4 +535,13 @@ export const redirectToUrl = (url, newTab = false) => {
   }
 
   return window.open(url);
+};
+
+export const navigateBack = (navigate, location, fallback) => {
+  // if the location key is not default, it means that the user has navigated to the page within the app and we can navigate back
+  if (location.key !== "default") {
+    navigate(-1);
+  } else {
+    fallback();
+  }
 };

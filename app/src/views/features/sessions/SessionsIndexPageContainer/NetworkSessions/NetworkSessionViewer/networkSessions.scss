@@ -32,6 +32,8 @@
 }
 
 .network-session-table-container {
+  height: 100%;
+
   .ant-pro-table-list-toolbar-left,
   .ant-pro-table-list-toolbar-title {
     width: 100%;
@@ -45,6 +47,12 @@
     }
     .network-session-list-heading {
       margin-bottom: 0;
+    }
+
+    .import-btn-group {
+      display: flex;
+      align-items: flex-end;
+      gap: 4px;
     }
   }
 }

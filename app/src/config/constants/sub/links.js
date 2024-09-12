@@ -38,11 +38,11 @@ const LINKS = {
   REQUESTLY_DOCS_HTTP_MODIFICATIONS: "https://docs.requestly.io/browser-extension/chrome/http-modifications/overview",
 
   // Docs - Source Filters
-  REQUESTLY_DOCS_SOURCE_FILTERS: "https://docs.requestly.io/browser-extension/chrome/features/advance-targeting",
+  REQUESTLY_DOCS_SOURCE_FILTERS:
+    "https://docs.requestly.com/general/http-rules-(modify-traffic)/advanced-usage/advance-targeting",
 
-  // Docs - Import rules from charles proxy (desktop only)
-  REQUESTLY_DOCS_IMPORT_SETTINGS_FROM_CHARLES:
-    "https://docs.requestly.io/desktop-app/mac/features/import-settings-from-charles",
+  // Docs - Import rules from charles proxy
+  REQUESTLY_DOCS_IMPORT_SETTINGS_FROM_CHARLES: "https://developers.requestly.com/http-rules/import-from-charles/",
 
   // Docs - Test URL condition
   REQUESTLY_DOCS_TEST_URL_CONDITION: "https://developers.requestly.io/http-rules/test-url-condition",
@@ -50,6 +50,20 @@ const LINKS = {
   REQUESTLY_DOCS_SESSION_RECORDING_ARCHITECTURE: "https://developers.requestly.io/sessions/architecture/",
 
   REQUESTLY_API_DOCS: "https://developers.requestly.io/api/overview/",
+
+  REQUESTLY_REDIRECT_RULE_DOCS: "https://developers.requestly.com/http-rules/map-local-url-redirect",
+  REQUESTLY_CANCEL_RULE_DOCS: "https://developers.requestly.com/http-rules/cancel-rule/",
+  REQUESTLY_DELAY_RULE_DOCS: "https://developers.requestly.com/http-rules/delay-request/",
+  REQUESTLY_HEADERS_RULE_DOCS: "https://developers.requestly.com/http-rules/modify-headers/",
+  REQUESTLY_QUERYPARAM_RULE_DOCS: "https://developers.requestly.com/http-rules/modify-query-params/",
+  REQUESTLY_REPLACE_RULE_DOCS: "https://developers.requestly.com/http-rules/replace-strings/",
+  REQUESTLY_REQUEST_RULE_DOCS: "https://developers.requestly.com/http-rules/modify-request-body/",
+  REQUESTLY_RESPONSE_RULE_DOCS: "https://developers.requestly.com/http-rules/modify-response-body/",
+  REQUESTLY_SCRIPT_RULE_DOCS: "https://developers.requestly.com/http-rules/modify-dom-inject-scripts/",
+  REQUESTLY_USERAGENT_RULE_DOCS: "https://developers.requestly.com/http-rules/modify-user-agents/",
+
+  REQUESTLY_HEADERS_RULE_FAQ_LINK:
+    "https://docs.requestly.com/general/http-rules-(modify-traffic)/rule-types/modify-headers#faqs",
 
   /** LANDING PAGES **/
 
@@ -79,7 +93,8 @@ const LINKS = {
   /** EXTENSIONS */
 
   //Chrome
-  CHROME_EXTENSION: "https://chrome.google.com/webstore/detail/requestly/mdnleldcmiljblolnjhpnblkcekpdkpa",
+  CHROME_EXTENSION:
+    "https://chromewebstore.google.com/detail/requestly-intercept-modif/mdnleldcmiljblolnjhpnblkcekpdkpa",
 
   CHROME_STORE_REVIEWS:
     "https://chromewebstore.google.com/detail/requestly-intercept-modif/mdnleldcmiljblolnjhpnblkcekpdkpa/reviews",

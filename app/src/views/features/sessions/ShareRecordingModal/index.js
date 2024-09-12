@@ -1,7 +1,10 @@
+import React, { useEffect, useState, useRef, useCallback } from "react";
+import { getIsWorkspaceMode } from "store/features/teams/selectors";
+import { getUserAuthDetails } from "store/selectors";
 import { Button, Col, Row, Radio, Tag, Typography, Modal } from "antd";
+import EmailInputWithDomainBasedSuggestions from "components/common/EmailInputWithDomainBasedSuggestions";
 import { BsBuilding } from "@react-icons/all-files/bs/BsBuilding";
 import { AiOutlineLink } from "@react-icons/all-files/ai/AiOutlineLink";
-import React, { useEffect, useState, useRef } from "react";
 import { getSessionRecordingSharedLink } from "utils/PathUtils";
 import { ShareAltOutlined } from "@ant-design/icons";
 import { IoEarthOutline } from "@react-icons/all-files/io5/IoEarthOutline";
@@ -9,18 +12,15 @@ import firebaseApp from "../../../../firebase";
 import { FiLock } from "@react-icons/all-files/fi/FiLock";
 import { FiUsers } from "@react-icons/all-files/fi/FiUsers";
 import SpinnerColumn from "components/misc/SpinnerColumn";
-import {
-  trackIframeEmbedCopied,
-  trackSessionRecordingShareLinkCopied,
-} from "modules/analytics/events/features/sessionRecording";
+import { trackSessionRecordingShareLinkCopied } from "features/sessionBook/analytics";
+import { trackIframeEmbedCopied } from "modules/analytics/events/features/sessionRecording";
 import { getFunctions, httpsCallable } from "firebase/functions";
 import { fetchCurrentEmails, updateVisibility } from "../api";
 import { Visibility } from "../SessionViewer/types";
-import "./shareRecordingModal.scss";
 import { useSelector } from "react-redux";
-import { getIsWorkspaceMode } from "store/features/teams/selectors";
-import { getUserAuthDetails } from "store/selectors";
-import EmailInputWithDomainBasedSuggestions from "components/common/EmailInputWithDomainBasedSuggestions";
+import { StartFromOffsetInput } from "./components/StartFromOffsetInput/StartFromOffsetInput";
+import { getSecondsFromStringifiedMinSec } from "utils/DateTimeUtils";
+import "./shareRecordingModal.scss";
 
 const _ = require("lodash");
 
@@ -57,7 +57,14 @@ export const getPrettyVisibilityName = (visibility, isWorkspaceMode) => {
   }
 };
 
-const ShareRecordingModal = ({ currentVisibility, isVisible, setVisible, recordingId, onVisibilityChange = null }) => {
+const ShareRecordingModal = ({
+  currentVisibility,
+  isVisible,
+  setVisible,
+  recordingId,
+  onVisibilityChange = null,
+  currentOffset = "0:00",
+}) => {
   const user = useSelector(getUserAuthDetails);
   const isWorkspaceMode = useSelector(getIsWorkspaceMode);
 
@@ -69,6 +76,7 @@ const ShareRecordingModal = ({ currentVisibility, isVisible, setVisible, recordi
   const [currentEmails, setCurrentEmails] = useState([]);
   const [sessionVisibility, setSessionVisibility] = useState(currentVisibility);
   const [dataLoading, setDataLoading] = useState(true);
+  const [startFromOffset, setStartFromOffset] = useState(null);
   const sentEmails = useRef([]);
 
   const handleCloseModal = () => {
@@ -76,9 +84,10 @@ const ShareRecordingModal = ({ currentVisibility, isVisible, setVisible, recordi
   };
 
   const onCopyHandler = () => {
+    const offset = getSecondsFromStringifiedMinSec(startFromOffset);
     trackSessionRecordingShareLinkCopied("app");
     setIsTextCopied(true);
-    navigator.clipboard.writeText(publicURL); //copy to clipboard
+    navigator.clipboard.writeText(`${publicURL}${offset ? `?t=${offset}` : ""}`);
     setTimeout(() => {
       setIsTextCopied(false);
     }, 700);
@@ -108,6 +117,7 @@ const ShareRecordingModal = ({ currentVisibility, isVisible, setVisible, recordi
   const handleVisibilityChange = async (newVisibility) => {
     await updateVisibility(user?.details?.profile?.uid, recordingId, newVisibility);
     onVisibilityChange && onVisibilityChange(newVisibility);
+    fetchUserEmails();
   };
 
   const getPrettyDescription = (visibility) => {
@@ -207,9 +217,7 @@ const ShareRecordingModal = ({ currentVisibility, isVisible, setVisible, recordi
     );
   };
 
-  useEffect(() => {
-    if (currentVisibility !== Visibility.CUSTOM) return;
-
+  const fetchUserEmails = useCallback(async () => {
     fetchCurrentEmails(recordingId)
       .then((emails) => {
         setCurrentEmails(emails);
@@ -220,7 +228,12 @@ const ShareRecordingModal = ({ currentVisibility, isVisible, setVisible, recordi
         alert("An unexpected error has occurred!");
         return;
       });
-  }, [currentVisibility, recordingId]);
+  }, [recordingId]);
+
+  useEffect(() => {
+    if (currentVisibility !== Visibility.CUSTOM) return;
+    fetchUserEmails();
+  }, [currentVisibility, fetchUserEmails]);
 
   if (_.isEmpty(recordingId)) return null;
 
@@ -234,6 +247,7 @@ const ShareRecordingModal = ({ currentVisibility, isVisible, setVisible, recordi
       open={isVisible}
       onCancel={handleCloseModal}
       width={640}
+      maskClosable={false}
       footer={[
         <Row justify="space-between">
           <div>
@@ -314,6 +328,12 @@ const ShareRecordingModal = ({ currentVisibility, isVisible, setVisible, recordi
                   </Radio.Group>
                   {sessionVisibility === Visibility.CUSTOM && (
                     <div className="share-option-description">{renderRestrictedUsersList()}</div>
+                  )}
+                  {sessionVisibility !== Visibility.ONLY_ME && (
+                    <StartFromOffsetInput
+                      currentOffset={currentOffset}
+                      onOffsetChange={(offset) => setStartFromOffset(offset)}
+                    />
                   )}
                 </Col>
               </Row>

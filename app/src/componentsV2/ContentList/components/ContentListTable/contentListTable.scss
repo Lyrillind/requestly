@@ -1,6 +1,6 @@
 .rq-content-list-table-container {
   background-color: var(--requestly-color-background);
-  margin: 16px 16px;
+  padding: 1rem;
   width: 100%;
   max-width: 1920px;
 
@@ -8,6 +8,11 @@
     background-color: inherit;
     border: 1px solid var(--requestly-color-white-t-10);
     border-radius: 4px;
+
+    .rq-dnd-target-row {
+      // opacity: 0.5;
+      background-color: rgba(46, 45, 45, 0.414) !important;
+    }
 
     .rq-content-list-table-header {
       th,
@@ -23,7 +28,7 @@
         .ant-table-column-title {
           flex-grow: 0;
           color: var(--requestly-color-text-default);
-          font-size: 13px;
+          font-size: var(--requestly-font-size-sm, 13px);
           font-weight: 400;
           line-height: 20px;
           letter-spacing: 0.25px;
@@ -68,7 +73,12 @@
     }
 
     .rq-content-list-table-row {
+      font-size: var(--requestly-font-size-sm, 13px);
       background: var(--requestly-color-background);
+
+      &.ant-table-row-level-0 {
+        cursor: auto !important;
+      }
 
       .ant-table-cell-with-append {
         .group-expand-icon {

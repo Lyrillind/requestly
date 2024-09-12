@@ -2,7 +2,6 @@ import React, { useCallback, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { getAllRules, getAppMode, getUserAuthDetails } from "store/selectors";
-import { getIsWorkspaceMode } from "store/features/teams/selectors";
 import { FeatureLimitType } from "hooks/featureLimiter/types";
 import { useFeatureLimiter } from "hooks/featureLimiter/useFeatureLimiter";
 import { useFeatureValue } from "@growthbook/growthbook-react";
@@ -22,7 +21,7 @@ import { trackUpgradeToastViewed } from "features/pricing/components/PremiumFeat
 import { CONSTANTS as GLOBAL_CONSTANTS } from "@requestly/requestly-core";
 import { Group, Rule } from "types";
 import { actions } from "store";
-
+import Logger from "lib/logger";
 import "./sharedListViewerContentHeader.scss";
 
 interface ContentHeaderProps {
@@ -44,7 +43,6 @@ export const SharedListsContentHeader: React.FC<ContentHeaderProps> = ({
   const user = useSelector(getUserAuthDetails);
   const appMode = useSelector(getAppMode);
   const allRules = useSelector(getAllRules);
-  const isWorkspaceMode = useSelector(getIsWorkspaceMode);
   const navigate = useNavigate();
   const location = useLocation();
   const { getFeatureLimitValue } = useFeatureLimiter();
@@ -84,14 +82,6 @@ export const SharedListsContentHeader: React.FC<ContentHeaderProps> = ({
       return;
     }
 
-    if (isWorkspaceMode) {
-      const message =
-        "Do you really want to import this shared list to current workspace? It will be available for every team member.";
-      if (!window.confirm(message) === true) {
-        return;
-      }
-    }
-
     setAreRulesImporting(true);
 
     sendSharedListImportedEmail(
@@ -103,16 +93,23 @@ export const SharedListsContentHeader: React.FC<ContentHeaderProps> = ({
       console.error(err);
     });
 
-    //process Data
-    processDataToImport([...sharedListRules, ...sharedListGroups], user, allRules).then((result) => {
-      const processedRulesToImport = result.data;
+    try {
+      //process Data
+      processDataToImport([...sharedListRules, ...sharedListGroups], user, allRules).then((result) => {
+        const processedRulesToImport = result.data;
 
-      addRulesAndGroupsToStorage(appMode, processedRulesToImport).then(() => {
-        toast.info(`Successfully imported rules`);
-        trackSharedListImportCompleted(sharedListId, sharedListRules.length);
-        redirectToRules(navigate);
+        addRulesAndGroupsToStorage(appMode, processedRulesToImport).then(() => {
+          toast.info(`Successfully imported rules`);
+          trackSharedListImportCompleted(sharedListId, sharedListRules.length);
+          redirectToRules(navigate);
+        });
       });
-    });
+    } catch (error) {
+      setAreRulesImporting(false);
+      trackSharedListImportFailed(sharedListId, sharedListRules.length);
+      toast.error("Unable to import invalid shared list!");
+      Logger.log("Error while processing sharedlist", error);
+    }
   }, [
     sharedListRules,
     sharedListGroups,
@@ -123,7 +120,6 @@ export const SharedListsContentHeader: React.FC<ContentHeaderProps> = ({
     isImportLimitReached,
     isBackgateRestrictionEnabled,
     isUpgradePopoverEnabled,
-    isWorkspaceMode,
     appMode,
     dispatch,
     navigate,

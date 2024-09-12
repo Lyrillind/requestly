@@ -1,11 +1,13 @@
 import React, { useMemo } from "react";
+import { useLocation } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { Tooltip } from "antd";
-import { getAppMode, getNetworkSessionSaveInProgress } from "store/selectors";
+import { getAppMode, getIsSecondarySidebarCollapsed, getNetworkSessionSaveInProgress } from "store/selectors";
 import { ApiOutlined, HomeOutlined } from "@ant-design/icons";
 import NetworkTrafficIcon from "assets/icons/network-traffic.svg?react";
 import HttpRulesIcon from "assets/icons/http-rules.svg?react";
 import SessionIcon from "assets/icons/session.svg?react";
+import WolfSafeIcon from "assets/icons/wolfsafe.svg?react";
 import MockServerIcon from "assets/icons/mock-server.svg?react";
 import { TbDeviceDesktopSearch } from "@react-icons/all-files/tb/TbDeviceDesktopSearch";
 import { PrimarySidebarLink } from "./components/PrimarySidebarLink/PrimarySidebarLink";
@@ -20,15 +22,29 @@ import FEATURES from "config/constants/sub/features";
 import { useFeatureIsOn } from "@growthbook/growthbook-react";
 import { CreditsButton } from "./components/CreditsButton/CreditsButton";
 import { useIsIncentivizationEnabled } from "features/incentivization/hooks";
+import JoinSlackButton from "./components/JoinSlackButton/JoinSlackButton";
+import useFetchSlackInviteVisibility from "components/misc/SupportPanel/useSlackInviteVisibility";
+import { SidebarToggleButton } from "componentsV2/SecondarySidebar/components/SidebarToggleButton/SidebarToggleButton";
+import APP_CONSTANTS from "config/constants";
 import "./PrimarySidebar.css";
 
 export const PrimarySidebar: React.FC = () => {
+  const { pathname } = useLocation();
   const appMode = useSelector(getAppMode);
   const isSavingNetworkSession = useSelector(getNetworkSessionSaveInProgress);
+  const isSecondarySidebarCollapsed = useSelector(getIsSecondarySidebarCollapsed);
 
   const isIncentivizationEnabled = useIsIncentivizationEnabled();
+  const isSlackConnectFeatureEnabled = useFeatureIsOn("slack_connect");
+  const isSlackInviteVisible = useFetchSlackInviteVisibility();
+
   const isDesktopSessionsCompatible =
     useFeatureIsOn("desktop-sessions") && isFeatureCompatible(FEATURES.DESKTOP_SESSIONS);
+
+  const isSecondarySidebarToggleAllowed = [
+    APP_CONSTANTS.PATHS.RULES.INDEX,
+    APP_CONSTANTS.PATHS.MOCK_SERVER.INDEX,
+  ].some((path) => pathname.includes(path));
 
   const sidebarItems: PrimarySidebarItem[] = useMemo(() => {
     const showTooltipForSessionIcon = appMode === GLOBAL_CONSTANTS.APP_MODES.DESKTOP && isSavingNetworkSession;
@@ -57,6 +73,18 @@ export const PrimarySidebar: React.FC = () => {
         activeColor: "var(--http-rules)",
       },
       {
+        id: 6,
+        title: "API Security & Testing",
+        path: PATHS.API_SECURITY_TESTING.INDEX,
+        icon: (
+          <span className="icon-with-badge">
+            <WolfSafeIcon /> <RQBadge badgeText="NEW" />
+          </span>
+        ),
+        display: true,
+        activeColor: "var(--session-recording)",
+      },
+      {
         id: 3,
         title: "Sessions",
         path: PATHS.SESSIONS.INDEX,
@@ -67,13 +95,14 @@ export const PrimarySidebar: React.FC = () => {
             title={showTooltipForSessionIcon ? "View and manage your saved sessions here" : ""}
           >
             <span className="icon-with-badge">
-              <SessionIcon /> <RQBadge badgeText="BETA" />
+              <SessionIcon />
             </span>
           </Tooltip>
         ),
         display: true,
         activeColor: "var(--session-recording)",
       },
+
       {
         id: 4,
         title: "Mock server",
@@ -115,6 +144,7 @@ export const PrimarySidebar: React.FC = () => {
 
   return (
     <div className="primary-sidebar-container">
+      {isSecondarySidebarCollapsed && isSecondarySidebarToggleAllowed && <SidebarToggleButton />}
       <ul>
         {sidebarItems
           .filter((item) => item.display)
@@ -126,6 +156,7 @@ export const PrimarySidebar: React.FC = () => {
       </ul>
       <div className="primary-sidebar-bottom-btns">
         {isIncentivizationEnabled ? <CreditsButton /> : null}
+        {isSlackConnectFeatureEnabled && isSlackInviteVisible && <JoinSlackButton />}
         <InviteButton />
       </div>
     </div>

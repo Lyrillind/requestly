@@ -54,12 +54,12 @@
 }
 
 .rq-network-table-container .ant-collapse > .ant-collapse-item > .ant-collapse-header .ant-collapse-arrow {
-  font-size: 11px;
+  font-size: var(--requestly-font-size-xs, 11px);
   margin-right: 8px;
 }
 
 .rq-network-table-container .ant-collapse .ant-collapse-header .ant-collapse-header-text {
-  font-size: 13px;
+  font-size: var(--requestly-font-size-sm, 13px);
   line-height: 1.6;
   font-weight: 500;
 }
@@ -80,7 +80,7 @@
 
 .rq-network-table-container .rq-resource-table-wrapper {
   overflow-y: auto;
-  height: calc(100% - 56px); /* deducting filter input height */
+  height: calc(100% - 88px); /* deducting filter input height */
   margin-top: 8px;
 }
 

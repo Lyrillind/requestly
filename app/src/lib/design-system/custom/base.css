@@ -92,7 +92,7 @@
 }
 
 .text-sm {
-  font-size: 13px;
+  font-size: var(--requestly-font-size-sm, 13px);
   line-height: 14.06px;
 }
 
@@ -148,6 +148,10 @@
 
 .align-self-center {
   align-self: center;
+}
+
+.align-self-start {
+  align-self: flex-start;
 }
 
 .items-center {

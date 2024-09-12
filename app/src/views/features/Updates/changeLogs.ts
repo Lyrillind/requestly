@@ -8,6 +8,61 @@ const changeLogs: VersionedChangeLogs[] = [
     logs: [],
   },
   {
+    version: "24.9.11",
+    logs: [
+      "[ENGG-2263] feat: Show Captured localStorage events in session details panel (#2145)",
+      "[ENGG-2198] feat: rule executions tab in extension's network panel (#2118)",
+      "[ENGG-2196] migrated monaco to code mirror in network devtools (#2115)",
+      "fix: sendMessage returns nothing in firefox",
+    ],
+  },
+  {
+    version: "24.9.2",
+    logs: ["[ENGG-2136] feat: sharedState in extension dynamic request, response rules (#2072)"],
+  },
+  {
+    version: "24.8.13",
+    logs: [
+      "fix: blocklist check in script rule (#2074)",
+      "fix: script rule execution event only on applied rules (#2060)",
+      "[ENGG-2135] feat: option to inject script rules only in the main document (#2054)",
+    ],
+  },
+  {
+    version: "24.7.29",
+    logs: [
+      "add failsafe for fetch interceptor (#2022)",
+      "fix: graphQl payload filtering not working for numbers (#2021)",
+      "[ENGG-1956] fix: extension icon not turning grey (#2018)",
+      "fix: failsafe for xhr interceptor (#2016)",
+      "[ENGG-1958] fix: main_frame request rules from appearing on executed rules popup ",
+      "[ENGG-2097] fix: DNRs not being refreshed with blocklist change (#2000)",
+      "[ENGG-2094] added playwright testcases for request and response (XHR) rules (#1989)",
+    ],
+  },
+  {
+    version: "24.7.23",
+    logs: [
+      "fix: increase debounce time while updating dnrs (#1964)",
+      "test mv3: all rules (#1893)",
+      "[ENGG-1960 ENGG-1991] feat: extension should not work on the defined blockedList (#1885)",
+      "[ENGG-1853] fix: popup showing rule executions when disabled (#1925)",
+      "[ENGG-1860] update popup changes in webApp in realtime (#1831)",
+    ],
+  },
+  {
+    version: "24.7.7",
+    logs: ["fix: Non async XHR breaking websites (#1920)"],
+  },
+  {
+    version: "24.7.2",
+    logs: [
+      "[ENGG-1989] fix: DNR rules not getting unique ID while saving (#1879)",
+      "fix: extension on update (#1890)",
+      "ENGG-1939: Show extension version in app and extension popup footer (#1881)",
+    ],
+  },
+  {
     version: "24.6.21",
     logs: [
       "[ENGG-1659] chore: MV3 async xhr support (#1829)",

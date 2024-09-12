@@ -1,11 +1,12 @@
-import { useFeatureIsOn } from "@growthbook/growthbook-react";
+import { ContentListScreen } from "componentsV2/ContentList";
 import RulesList from "./components/RulesList/RulesList";
-import RulesIndexView from "views/features/rules/RulesIndexView";
 
 const RulesListScreen = () => {
-  const shouldShowNewRulesList = useFeatureIsOn("new-rule-table");
-
-  return shouldShowNewRulesList ? <RulesList /> : <RulesIndexView />;
+  return (
+    <ContentListScreen>
+      <RulesList />
+    </ContentListScreen>
+  );
 };
 
 export default RulesListScreen;

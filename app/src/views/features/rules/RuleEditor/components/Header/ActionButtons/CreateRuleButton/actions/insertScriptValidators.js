@@ -94,7 +94,11 @@ export const HTML_ERRORS = {
  */
 export async function validateHTMLTag(str, htmlNodeName) {
   const HTMLLinterResult = await htmlValidateRawCodeString(str);
-  if (!HTMLLinterResult.isValid) {
+
+  if (
+    !HTMLLinterResult.isValid &&
+    !HTMLLinterResult.validationErrors.find((ele) => ele.errorType === "unclosed_tags")
+  ) {
     return {
       isValid: false,
       validationError: HTMLLinterResult.validationErrors[0].errorType,
@@ -158,48 +162,57 @@ async function htmlValidateRawCodeString(codeString) {
   });
   const htmlvalidate = new HtmlValidate(loader);
 
-  const report = await htmlvalidate.validateString(codeString);
+  return htmlvalidate
+    .validateString(codeString)
+    .then((report) => {
+      if (report.valid) {
+        return {
+          isValid: true,
+          validationErrors: [],
+        };
+      }
 
-  if (report.valid) {
-    return {
-      isValid: true,
-      validationErrors: [],
-    };
-  }
+      const validationErrors = [];
 
-  const validationErrors = [];
+      /* CURRENTLY WE ARE ONLY CONCERNED WITH SPECIFIC ERRORS */
 
-  /* CURRENTLY WE ARE ONLY CONCERNED WITH SPECIFIC ERRORS */
-
-  report.results.forEach((result) => {
-    if (result.errorCount > 0) {
-      result.messages.forEach((errMessage) => {
-        if (errMessage.ruleId === "parser-error") {
-          validationErrors.push({
-            message: errMessage.message,
-            errorType: HTML_ERRORS.COULD_NOT_PARSE,
-          });
-        }
-        if (errMessage.ruleId === "close-order" || errMessage.ruleId === "script-element") {
-          validationErrors.push({
-            message: errMessage.message,
-            errorType: HTML_ERRORS.UNCLOSED_TAGS,
-          });
-        }
-        if (errMessage.ruleId === "close-attr") {
-          validationErrors.push({
-            message: errMessage.message,
-            errorType: HTML_ERRORS.UNCLOSED_ATTRIBUTES,
+      report.results.forEach((result) => {
+        if (result.errorCount > 0) {
+          result.messages.forEach((errMessage) => {
+            if (errMessage.ruleId === "parser-error") {
+              validationErrors.push({
+                message: errMessage.message,
+                errorType: HTML_ERRORS.COULD_NOT_PARSE,
+              });
+            }
+            if (errMessage.ruleId === "close-order" || errMessage.ruleId === "script-element") {
+              validationErrors.push({
+                message: errMessage.message,
+                errorType: HTML_ERRORS.UNCLOSED_TAGS,
+              });
+            }
+            if (errMessage.ruleId === "close-attr") {
+              validationErrors.push({
+                message: errMessage.message,
+                errorType: HTML_ERRORS.UNCLOSED_ATTRIBUTES,
+              });
+            }
           });
         }
       });
-    }
-  });
 
-  return {
-    isValid: validationErrors.length === 0,
-    validationErrors,
-  };
+      return {
+        isValid: validationErrors.length === 0,
+        validationErrors,
+      };
+    })
+    .catch((error) => {
+      console.error("Error validating HTML string:", error);
+      return {
+        isValid: true, // htmlValidate Errors out sometimes, so we return true
+        validationErrors: [{ message: "Error validating HTML string", errorType: HTML_ERRORS.COULD_NOT_PARSE }],
+      };
+    });
 }
 
 /**
@@ -220,7 +233,7 @@ function isHTMLString(str, generatedDocument) {
 
   return (
     // nodeType 1 is for element nodes
-    Array.from(generatedDocument.body.childNodes).some((node) => node.nodeType === 1) || // most nodes end up in body
+    /* Array.from(generatedDocument.body.childNodes).some((node) => node.nodeType === 1) || // most nodes end up in body */ // commenting since being this thorough is causing issues
     Array.from(generatedDocument.head.childNodes).some((node) => node.nodeType === 1) // special nodes like link and style end up in head
   );
 }
@@ -305,12 +318,50 @@ function extractDOMNodeDetails(htmlCodeString, nodeName) {
   const doc = parser.parseFromString(htmlCodeString, "text/html");
   const blocks = doc.getElementsByTagName(nodeName) ?? [];
   return Array.from(blocks).map((htmlBlock) => {
+    console.log("DBG: extractDOMNodeDetails: htmlBlock", htmlBlock);
+    const innerText = getInnerMostText(htmlBlock.innerText, nodeName);
+    console.log("DBG: extractDOMNodeDetails: innerText", innerText);
     return {
-      innerText: htmlBlock.innerText,
+      innerText,
       attributes: Array.from(htmlBlock.attributes).map((attr) => ({ name: attr.name, value: attr.value })),
       parent: htmlBlock.parentNode,
       html: htmlBlock.outerHTML,
       originalCode: htmlCodeString,
     };
   });
+}
+
+function getInnerMostText(caseString, htmlElementName) {
+  const openingTag = `<${htmlElementName}`;
+  const openingTagStartIndex = caseString.lastIndexOf(openingTag);
+  let innerTextStart = 0;
+  if (openingTagStartIndex !== -1) {
+    const openingTagEndIndex = caseString.indexOf(">", openingTagStartIndex);
+    if (openingTagEndIndex === -1) {
+      console.error("Unexpected error, no closing tag delimiter found");
+      innerTextStart = openingTagStartIndex + openingTag.length + 1;
+    } else {
+      innerTextStart = openingTagEndIndex + 1;
+    }
+  }
+
+  let innerTextEnd = caseString.length;
+  const closingTag = `</${htmlElementName}>`;
+  const closingTagIndex = caseString.indexOf(closingTag);
+  if (closingTagIndex !== -1) {
+    innerTextEnd = closingTagIndex;
+  }
+
+  if (innerTextEnd < innerTextStart) {
+    console.error(
+      "Unexpected Nesting case, basic sanitization cannot fix this, please ask user to fix",
+      caseString,
+      htmlElementName
+    );
+    // returning unprocessed string
+    return caseString;
+  }
+
+  const innerText = caseString.slice(innerTextStart, innerTextEnd);
+  return innerText;
 }

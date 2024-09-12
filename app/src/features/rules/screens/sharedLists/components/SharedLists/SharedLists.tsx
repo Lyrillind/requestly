@@ -5,23 +5,22 @@ import { SharedListsContentHeader } from "./components/SharedListsContentHeader/
 import { SharedListsTable } from "./components/SharedListsTable/SharedListsTable";
 import CreateSharedListCTA from "./components/CreateSharedListCTA";
 import SpinnerCard from "components/misc/SpinnerCard";
-import { getIsWorkspaceMode } from "store/features/teams/selectors";
 import { getIsExtensionEnabled } from "store/selectors";
 import ExtensionDeactivationMessage from "components/misc/ExtensionDeactivationMessage";
-import TeamFeatureComingSoon from "components/landing/TeamFeatureComingSoon";
 import { SharedList } from "./types";
 import "./sharedLists.scss";
 
 export const SharedLists = () => {
   const isExtensionEnabled = useSelector(getIsExtensionEnabled);
-  const isWorkspaceMode = useSelector(getIsWorkspaceMode);
   const [searchValue, setSearchValue] = useState("");
   const { sharedLists, isSharedListsLoading } = useFetchSharedLists();
 
   const filteredSharedLists = useMemo(() => {
     if (!sharedLists) return [];
     else {
-      return sharedLists?.filter((list: SharedList) => list.listName.toLowerCase().includes(searchValue.toLowerCase()));
+      return sharedLists?.filter((list: SharedList) =>
+        list.listName?.toLowerCase().includes(searchValue.toLowerCase())
+      );
     }
   }, [sharedLists, searchValue]);
 
@@ -32,8 +31,6 @@ export const SharedLists = () => {
   if (isSharedListsLoading) {
     return <SpinnerCard customLoadingMessage="Loading Shared Lists" />;
   }
-
-  if (isWorkspaceMode) return <TeamFeatureComingSoon title="Shared lists" />;
 
   if (sharedLists?.length) {
     return (

@@ -9,7 +9,12 @@ import { MdExpandMore } from "@react-icons/all-files/md/MdExpandMore";
 import { BottomSheetPlacement } from "./types";
 import "./BottomSheet.scss";
 
-export const BottomSheet: React.FC<TabsProps> = ({ items, defaultActiveKey }) => {
+interface BottomSheetProps extends TabsProps {
+  tourId?: string;
+  disableDocking?: boolean;
+}
+
+export const BottomSheet: React.FC<BottomSheetProps> = ({ items, defaultActiveKey, tourId = "", disableDocking }) => {
   const { isBottomSheetOpen, sheetPlacement, toggleBottomSheet, toggleSheetPlacement } = useBottomSheetContext();
   const isSheetPlacedAtBottom = sheetPlacement === BottomSheetPlacement.BOTTOM;
 
@@ -28,16 +33,23 @@ export const BottomSheet: React.FC<TabsProps> = ({ items, defaultActiveKey }) =>
             }}
           />
         )}
-
-        <RQButton
-          iconOnly
-          type="default"
-          onClick={() => toggleSheetPlacement()}
-          icon={isSheetPlacedAtBottom ? <BiDockRight /> : <BiDockBottom />}
-        />
+        {!disableDocking && (
+          <RQButton
+            iconOnly
+            type="default"
+            onClick={() => toggleSheetPlacement()}
+            icon={isSheetPlacedAtBottom ? <BiDockRight /> : <BiDockBottom />}
+          />
+        )}
       </div>
 
-      <Tabs defaultActiveKey={defaultActiveKey} items={items} type="card" onTabClick={() => toggleBottomSheet(true)} />
+      <Tabs
+        data-tour-id={tourId}
+        defaultActiveKey={defaultActiveKey}
+        items={items}
+        type="card"
+        onTabClick={() => toggleBottomSheet(true)}
+      />
     </>
   );
 };

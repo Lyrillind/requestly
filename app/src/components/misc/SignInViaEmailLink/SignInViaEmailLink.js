@@ -10,8 +10,10 @@ import { getAppMode, getUserAuthDetails } from "../../../store/selectors";
 import { isEmailValid } from "../../../utils/FormattingHelper";
 import { signInWithEmailLink } from "../../../actions/FirebaseActions";
 import { handleLogoutButtonOnClick } from "features/onboarding/components/auth/components/Form/actions";
-import { redirectToWebAppHomePage } from "utils/RedirectionUtils";
+import { redirectToRoot } from "utils/RedirectionUtils";
 import { toast } from "utils/Toast";
+import { CONSTANTS as GLOBAL_CONSTANTS } from "@requestly/requestly-core";
+
 import {
   trackSignInWithLinkCustomFormSeen,
   trackSignInWithLinkCustomFormSubmitted,
@@ -20,6 +22,7 @@ import "./index.css";
 import { trackAppOnboardingStepCompleted } from "features/onboarding/analytics";
 import { ONBOARDING_STEPS } from "features/onboarding/types";
 import Logger from "../../../../../common/logger";
+import { getAppFlavour } from "utils/AppUtils";
 
 const SignInViaEmailLink = () => {
   //Component State
@@ -57,10 +60,13 @@ const SignInViaEmailLink = () => {
 
   useEffect(() => {
     if (user.loggedIn) {
+      const appFlavour = getAppFlavour();
       const name = user?.displayName?.split(" ")[0];
-      let message = isLogin ? "Welcome back to Requestly!" : "Welcome to Requestly!";
+      let message = isLogin
+        ? "Welcome back!"
+        : `Welcome to ${appFlavour === GLOBAL_CONSTANTS.APP_FLAVOURS.SESSIONBEAR ? "SessionBear" : "Requestly"}!`;
       if (name) {
-        message = isLogin ? `Welcome back ${name}!` : `Welcome to Requestly ${name}!`;
+        message = isLogin ? `Welcome back ${name}!` : `Welcome ${name}!`;
       }
       toast.success(message);
       if (isLogin) {
@@ -69,7 +75,7 @@ const SignInViaEmailLink = () => {
         dispatch(actions.updateAppOnboardingStep(ONBOARDING_STEPS.PERSONA));
         trackAppOnboardingStepCompleted(ONBOARDING_STEPS.AUTH);
       }
-      redirectToWebAppHomePage(navigate);
+      redirectToRoot(navigate);
     }
   }, [dispatch, user.loggedIn, navigate, isLogin, user.displayName, user.email, user.details?.profile?.displayName]);
 

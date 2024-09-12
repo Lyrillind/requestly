@@ -17,9 +17,7 @@ export const setIsCurrentlySelectedRuleHasUnsavedChanges = (dispatch, hasUnsaved
 };
 
 export const setCurrentlySelectedRule = (dispatch, newRule, warnForUnsavedChanges = false) => {
-  if (warnForUnsavedChanges) {
-    setIsCurrentlySelectedRuleHasUnsavedChanges(dispatch, true);
-  }
+  setIsCurrentlySelectedRuleHasUnsavedChanges(dispatch, warnForUnsavedChanges);
 
   dispatch(actions.updateCurrentlySelectedRuleData(newRule));
 };
@@ -31,7 +29,7 @@ export const getEmptyPair = (currentlySelectedRuleConfig) => {
   };
 };
 
-const getEmptyPairUsingRuleType = (ruleType) => {
+export const getEmptyPairUsingRuleType = (ruleType) => {
   return {
     ...RULE_TYPES_CONFIG[ruleType].EMPTY_PAIR_FORMAT,
     id: generateObjectId(),

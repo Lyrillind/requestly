@@ -13,6 +13,7 @@ import { getUserAuthDetails } from "store/selectors";
 import { getBillingTeamRedirectURL } from "backend/billing";
 import "./index.scss";
 import PATHS from "config/constants/sub/paths";
+import { trackCheckoutCompleted } from "modules/analytics/events/misc/business/checkout";
 
 interface CheckoutProps {
   clientSecret: string;
@@ -54,6 +55,7 @@ export const Checkout: React.FC<CheckoutProps> = ({
     onComplete: () => {
       redirectTolatestBillingTeam();
       onCheckoutCompleted?.();
+      trackCheckoutCompleted();
     },
   };
 

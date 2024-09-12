@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import SpinnerCard from "components/misc/SpinnerCard";
 import {
   redirectToFileMockEditorEditMock,
@@ -17,6 +17,8 @@ import {
   UpdateMocksCollectionModalWrapper,
   MockUploaderModalWrapper,
   NewFileModalWrapper,
+  ExportMocksModalWrapper,
+  ImportMocksModalWrapper,
 } from "features/mocks/modals";
 import { getFilteredRecords } from "./components/MocksListContentHeader/utils";
 import "./mocksList.scss";
@@ -29,9 +31,10 @@ interface Props {
 
 const MockList: React.FC<Props> = ({ source, mockSelectionCallback, type }) => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [searchValue, setSearchValue] = useState<string>("");
-  const [filter, setFilter] = useState<MockTableHeaderFilter>("all");
   const [forceRender, setForceRender] = useState(false);
+  const filter = (searchParams.get("filter") as MockTableHeaderFilter) || "all";
 
   const { isLoading, mockRecords } = useFetchMockRecords(type, forceRender);
 
@@ -87,6 +90,7 @@ const MockList: React.FC<Props> = ({ source, mockSelectionCallback, type }) => {
       />
 
       <MockUploaderModalWrapper selectMockOnUpload={handleSelectAction} />
+      <ImportMocksModalWrapper />
     </>
   ) : mockRecords.length > 0 ? (
     <>
@@ -105,11 +109,11 @@ const MockList: React.FC<Props> = ({ source, mockSelectionCallback, type }) => {
           searchValue={searchValue}
           setSearchValue={handleSearch}
           filter={filter}
-          setFilter={setFilter}
         />
 
         <div className="mocks-table-container">
           <MocksTable
+            source={source}
             isLoading={isLoading}
             mockType={type}
             records={mockRecords}
@@ -125,6 +129,8 @@ const MockList: React.FC<Props> = ({ source, mockSelectionCallback, type }) => {
       <NewFileModalWrapper />
 
       <MockUploaderModalWrapper />
+      <ExportMocksModalWrapper />
+      <ImportMocksModalWrapper forceRender={_forceRender} />
 
       {/* FIXME: Remove force re-render and instead update the local state */}
       <CreateOrUpdateCollectionModalWrapper forceRender={_forceRender} />
@@ -135,7 +141,7 @@ const MockList: React.FC<Props> = ({ source, mockSelectionCallback, type }) => {
       <UpdateMocksCollectionModalWrapper mockType={type} forceRender={_forceRender} mocks={mockRecords} />
     </>
   ) : (
-    <GettingStarted mockType={type} source={source} />
+    <GettingStarted mockType={type} source={source} forceRender={_forceRender} />
   );
 };
 

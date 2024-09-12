@@ -11,6 +11,12 @@ import { BiArrowBack } from "@react-icons/all-files/bi/BiArrowBack";
 import { trackAppOnboardingStepCompleted, trackAppOnboardingViewed } from "features/onboarding/analytics";
 import { m } from "framer-motion";
 import APP_CONSTANTS from "config/constants";
+import { CONSTANTS as GLOBAL_CONSTANTS } from "@requestly/requestly-core";
+import { useFeatureValue } from "@growthbook/growthbook-react";
+import RQLogo from "assets/img/brand/rq_logo_full.svg";
+import SessionBearLogo from "src-SessionBear/assets/sessionBearLogoFull.svg";
+import { CompaniesLogoBanner } from "./components/CompaniesLogoBanner";
+import { getAppFlavour } from "utils/AppUtils";
 import "./index.scss";
 
 interface Props {
@@ -37,6 +43,8 @@ export const AuthScreen: React.FC<Props> = ({
   const [authMode, setAuthMode] = useState(defaultAuthMode);
   const [email, setEmail] = useState("");
   const [isVerifyEmailPopupVisible, setIsVerifyEmailPopupVisible] = useState(false);
+  const onboardingVariation = useFeatureValue("onboarding_activation_v2", "variant1");
+  const appFlavour = getAppFlavour();
 
   useEffect(() => {
     if (isOpen && isOnboarding) {
@@ -52,7 +60,7 @@ export const AuthScreen: React.FC<Props> = ({
   }, [user.loggedIn, dispatch, isOnboarding]);
 
   return (
-    <div className="onboarding-auth-screen-wrapper">
+    <div className={`onboarding-auth-screen-wrapper ${onboardingVariation === "variant3" ? "variant3" : ""}`}>
       {email && isVerifyEmailPopupVisible ? (
         <div className="verify-email-wrapper">
           <button
@@ -67,6 +75,41 @@ export const AuthScreen: React.FC<Props> = ({
           </button>
           <MagicLinkModalContent email={email} authMode={authMode} eventSource={source} />
         </div>
+      ) : onboardingVariation === "variant3" ? (
+        <>
+          <m.div
+            transition={{ type: "linear" }}
+            layout
+            className={`onboarding-auth-screen  variant3 ${
+              authMode === AUTH.ACTION_LABELS.SIGN_UP && onboardingVariation !== "variant3" ? "w-full" : ""
+            }`}
+          >
+            {appFlavour === GLOBAL_CONSTANTS.APP_FLAVOURS.SESSIONBEAR ? (
+              <img src={SessionBearLogo} alt="SessionBear logo" style={{ width: "165px" }} />
+            ) : (
+              <img src={RQLogo} alt="Requestly logo" style={{ width: "133px" }} />
+            )}
+            <m.div transition={{ type: "linear" }} layout className="onboarding-auth-form-wrapper">
+              <AuthForm
+                authMode={authMode}
+                setAuthMode={setAuthMode}
+                email={email}
+                setEmail={setEmail}
+                isOnboarding={isOnboarding}
+                source={source}
+                callback={callback}
+                setIsVerifyEmailPopupVisible={setIsVerifyEmailPopupVisible}
+                toggleModal={toggleAuthModal}
+                warningMessage={warningMessage}
+              />
+            </m.div>
+            {authMode === AUTH.ACTION_LABELS.SIGN_UP && appFlavour === GLOBAL_CONSTANTS.APP_FLAVOURS.REQUESTLY && (
+              <m.div transition={{ type: "linear" }} layout className="companies-logo-banner">
+                <CompaniesLogoBanner />
+              </m.div>
+            )}
+          </m.div>
+        </>
       ) : (
         <m.div
           transition={{ type: "linear" }}

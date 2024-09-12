@@ -34,6 +34,7 @@ export const switchWorkspace = async (
   const { teamId, teamName, teamMembersCount } = newWorkspaceDetails;
   let needToMergeRecords = false;
 
+  const refreshToken = await StorageService(appMode).getRecord(GLOBAL_CONSTANTS.STORAGE_KEYS.REFRESH_TOKEN);
   await StorageService(appMode).waitForAllTransactions();
 
   if (teamId !== null) {
@@ -103,6 +104,15 @@ export const switchWorkspace = async (
       membersCount: teamMembersCount,
     })
   );
+
+  StorageService(appMode).saveRecord({
+    [GLOBAL_CONSTANTS.STORAGE_KEYS.ACTIVE_WORKSPACE_ID]: teamId,
+  });
+
+  // SWITCHNG WORKSPACE CLEARS THE EXTENSION STORAGE
+  StorageService(appMode).saveRecord({
+    [GLOBAL_CONSTANTS.STORAGE_KEYS.REFRESH_TOKEN]: refreshToken,
+  });
 
   //Refresh Rules List
   dispatch(actions.updateHardRefreshPendingStatus({ type: "rules" }));

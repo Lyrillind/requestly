@@ -2,7 +2,6 @@ import React, { useState, useEffect, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useLocation, useSearchParams, Outlet } from "react-router-dom";
 import SpinnerModal from "components/misc/SpinnerModal";
-import AuthModal from "components/authentication/AuthModal";
 import { actions } from "store";
 //UTILS
 import {
@@ -12,6 +11,7 @@ import {
   getAppMode,
   getAppOnboardingDetails,
   getIsWorkspaceOnboardingCompleted,
+  getRequestBot,
 } from "store/selectors";
 import { getRouteFromCurrentPath } from "utils/URLUtils";
 import SyncConsentModal from "../../components/user/SyncConsentModal";
@@ -38,6 +38,7 @@ import { IncentiveTaskCompletedModal, IncentiveTasksListModal } from "features/i
 import { getIncentivizationActiveModals } from "store/features/incentivization/selectors";
 import { incentivizationActions } from "store/features/incentivization/slice";
 import { IncentivizationModal } from "store/features/incentivization/types";
+import { RequestBot } from "features/requestBot";
 
 const DashboardContent = () => {
   const location = useLocation();
@@ -54,6 +55,8 @@ const DashboardContent = () => {
   const [isImportRulesModalActive, setIsImportRulesModalActive] = useState(false);
   const isInsideIframe = useMemo(isAppOpenedInIframe, []);
   const onboardingVariation = useFeatureValue("onboarding_activation_v2", "variant1");
+  const requestBotDetails = useSelector(getRequestBot);
+  const isRequestBotVisible = requestBotDetails?.isActive;
 
   const toggleIncentiveTasksListModal = () => {
     dispatch(incentivizationActions.toggleActiveModal({ modalName: IncentivizationModal.TASKS_LIST_MODAL }));
@@ -66,9 +69,7 @@ const DashboardContent = () => {
   const toggleSpinnerModal = () => {
     dispatch(actions.toggleActiveModal({ modalName: "loadingModal" }));
   };
-  const toggleAuthModal = () => {
-    dispatch(actions.toggleActiveModal({ modalName: "authModal" }));
-  };
+
   const toggleExtensionModal = () => {
     dispatch(actions.toggleActiveModal({ modalName: "extensionModal" }));
   };
@@ -81,6 +82,10 @@ const DashboardContent = () => {
 
   const toggleImportRulesModal = () => {
     setIsImportRulesModalActive(isImportRulesModalActive ? false : true);
+  };
+
+  const closeRequestBot = () => {
+    dispatch(actions.updateRequestBot({ isActive: false }));
   };
 
   const prevProps = usePrevious({ location });
@@ -126,13 +131,6 @@ const DashboardContent = () => {
           ) : null}
           {activeModals.loadingModal.isActive ? (
             <SpinnerModal isOpen={activeModals.loadingModal.isActive} toggle={() => toggleSpinnerModal()} />
-          ) : null}
-          {activeModals.authModal.isActive ? (
-            <AuthModal
-              isOpen={activeModals.authModal.isActive}
-              toggle={() => toggleAuthModal()}
-              {...activeModals.authModal.props}
-            />
           ) : null}
           {activeModals.extensionModal.isActive ? (
             <InstallExtensionModal
@@ -230,6 +228,8 @@ const DashboardContent = () => {
           appOnboardingDetails.isOnboardingCompleted ? (
             <RequestBillingTeamAccessReminder />
           ) : null}
+
+          <RequestBot isOpen={isRequestBotVisible} onClose={closeRequestBot} modelType={requestBotDetails?.modelType} />
         </>
       )}
     </>

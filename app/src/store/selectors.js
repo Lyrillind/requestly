@@ -52,6 +52,11 @@ export const getGroupsSelection = (state) => {
   return rulesNode["selectedGroups"];
 };
 
+export const getIsSampleRulesImported = (state) => {
+  const rulesNode = getRulesNode(state);
+  return rulesNode["isSampleRulesImported"];
+};
+
 export const getCurrentlySelectedRule = (state) => {
   const rulesNode = getRulesNode(state);
   return rulesNode["currentlySelectedRule"];
@@ -75,6 +80,11 @@ export const getIsCurrentlySelectedRuleHasUnsavedChanges = (state) => {
 export const getCurrentlySelectedRuleErrors = (state) => {
   const currentlySelectedRule = getCurrentlySelectedRule(state);
   return currentlySelectedRule["errors"];
+};
+
+export const getIsCurrentlySelectedRuleDetailsPanelShown = (state) => {
+  const currentlySelectedRule = getCurrentlySelectedRule(state);
+  return currentlySelectedRule["showDetailsPanel"];
 };
 
 // response rule resource type
@@ -227,6 +237,10 @@ export const getIsRuleEditorTourCompleted = (state) => {
   );
 };
 
+export const getIsCodeEditorFullScreenModeOnboardingCompleted = (state) => {
+  return getGlobalState(state).misc.persist?.isCodeEditorFullScreenModeOnboardingCompleted;
+};
+
 export const getIsMiscTourCompleted = (state) => {
   return getGlobalState(state).misc.persist?.isMiscTourCompleted;
 };
@@ -295,6 +309,10 @@ export const getIsPlanExpiredBannerClosed = (state) => {
   return getGlobalState(state).misc.persist?.isPlanExpiredBannerClosed;
 };
 
+export const getIsManageBillingTeamAlertVisible = (state) => {
+  return getGlobalState(state).misc.persist?.isManageBillingTeamAlertVisible;
+};
+
 export const getAllEditorToast = (state) => {
   return getGlobalState(state).editorToast;
 };
@@ -305,4 +323,13 @@ export const getToastForEditor = (state, id) => {
 
 export const getIsAppBannerVisible = (state) => {
   return getGlobalState(state).misc.nonPersist?.isAppBannerVisible;
+};
+
+export const getIsSupportChatOpened = (state) => {
+  return getGlobalState(state).misc.persist?.isSupportChatOpened;
+};
+
+// request bot
+export const getRequestBot = (state) => {
+  return getGlobalState(state).misc.nonPersist?.requestBot;
 };

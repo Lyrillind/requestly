@@ -86,6 +86,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ isOpen }) => {
             <Col>
               <img src={RQLogo} alt="requestly logo" style={{ width: "90px" }} />
             </Col>
+
             {step === ONBOARDING_STEPS.PERSONA ||
             disableSkip ||
             (step === ONBOARDING_STEPS.AUTH && onboardingVariation === "variant3") ? null : (

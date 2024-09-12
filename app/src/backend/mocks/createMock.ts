@@ -4,11 +4,17 @@ import { MockRecordType, RQMockSchema } from "components/features/mocksV2/types"
 import { getOwnerId } from "backend/utils";
 import { updateUserMockSelectorsMap, uploadResponseBodyFiles } from "./common";
 import { BODY_IN_BUCKET_ENABLED } from "./constants";
-import { createResponseBodyFilepath } from "./utils";
+import { createMockDataPath, createResponseBodyFilepath } from "./utils";
 import { updateMockFromFirebase } from "./updateMock";
 import Logger from "lib/logger";
 
-export const createMock = async (uid: string, mockData: RQMockSchema, teamId?: string): Promise<string> => {
+export const createMock = async (
+  uid: string,
+  mockData: RQMockSchema,
+  teamId?: string,
+  collectionId?: string,
+  collectionPath?: string
+): Promise<string> => {
   if (!uid) {
     return null;
   }
@@ -23,12 +29,13 @@ export const createMock = async (uid: string, mockData: RQMockSchema, teamId?: s
       responsesWithBody.push({ ...response });
       response.body = null;
     });
+    mockData.storagePath = createMockDataPath(uid, mockData.id, teamId);
   }
 
   const mockId = await createMockFromFirebase(uid, mockData, teamId);
 
   if (mockId) {
-    await updateUserMockSelectorsMap(ownerId, mockId, mockData);
+    await updateUserMockSelectorsMap(ownerId, mockId, mockData, collectionId, collectionPath);
     if (BODY_IN_BUCKET_ENABLED) {
       await uploadResponseBodyFiles(responsesWithBody, uid, mockId, teamId);
       mockData.id = mockId;

@@ -24,6 +24,7 @@ import {
   getCurrentlySelectedRuleData,
   getCurrentlySelectedRuleConfig,
   getIsRuleEditorTourCompleted,
+  getIsCurrentlySelectedRuleDetailsPanelShown,
 } from "../../../../store/selectors";
 import * as RedirectionUtils from "../../../../utils/RedirectionUtils";
 import useExternalRuleCreation from "./useExternalRuleCreation";
@@ -37,6 +38,10 @@ import { getRuleConfigInEditMode, isDesktopOnlyRule } from "utils/rules/misc";
 import { ProductWalkthrough } from "components/misc/ProductWalkthrough";
 import { useHasChanged } from "hooks";
 import { m } from "framer-motion";
+import { RuleDetailsPanel } from "views/features/rules/RuleEditor/components/RuleDetailsPanel/RuleDetailsPanel";
+import { RuleEditorMode } from "features/rules";
+import { RULE_DETAILS } from "views/features/rules/RuleEditor/components/RuleDetailsPanel/constants";
+import { sampleRuleDetails } from "features/rules/screens/rulesList/components/RulesList/constants";
 import "./RuleBuilder.css";
 
 //CONSTANTS
@@ -54,9 +59,12 @@ const RuleBuilder = (props) => {
   const dispatch = useDispatch();
   const currentlySelectedRuleData = useSelector(getCurrentlySelectedRuleData);
   const currentlySelectedRuleConfig = useSelector(getCurrentlySelectedRuleConfig);
+  const isDetailsPanelShown = useSelector(getIsCurrentlySelectedRuleDetailsPanelShown);
 
   const allRules = useSelector(getAllRules);
   const appMode = useSelector(getAppMode);
+
+  const isSampleRule = currentlySelectedRuleData?.isSample;
 
   const enableDocs = useMemo(() => {
     return !props.isSharedListViewRule;
@@ -110,7 +118,7 @@ const RuleBuilder = (props) => {
       if (MODE === RULE_EDITOR_CONFIG.MODES.CREATE) {
         stableInitiateBlankCurrentlySelectedRule(
           dispatch,
-          currentlySelectedRuleConfig,
+          RULE_TYPES_CONFIG[RULE_TYPE_TO_CREATE],
           RULE_TYPE_TO_CREATE,
           setCurrentlySelectedRule,
           ruleGroupId
@@ -181,9 +189,11 @@ const RuleBuilder = (props) => {
   useEffect(() => {
     const source = state?.source ?? null;
     const ruleType = currentlySelectedRuleConfig.TYPE;
-    if (!ruleType || !source) return;
-    trackRuleEditorViewed(source, ruleType);
-  }, [currentlySelectedRuleConfig.TYPE, state]);
+
+    if (ruleType && source) {
+      trackRuleEditorViewed(source, ruleType);
+    }
+  }, [currentlySelectedRuleConfig.TYPE, state?.source]);
 
   useEffect(() => {
     if (
@@ -237,16 +247,36 @@ const RuleBuilder = (props) => {
 
   return (
     <m.div layout transition={{ type: "linear", duration: 0.2 }} style={{ height: "inherit" }}>
-      <ProductWalkthrough
+      {/* <ProductWalkthrough
         tourFor={RULE_TYPE_TO_CREATE}
         startWalkthrough={startWalkthrough}
         context={currentlySelectedRuleData}
         onTourComplete={() => dispatch(actions.updateProductTourCompleted({ tour: TOUR_TYPES.RULE_EDITOR }))}
-      />
+      /> */}
+
       {/* TODO: NEEDS REFACTORING */}
       <Row className="w-full relative rule-builder-container">
         <Col span={24} className="rule-builder-body-wrapper">
-          <Body mode={MODE} showDocs={isDocsVisible} currentlySelectedRuleConfig={currentlySelectedRuleConfig} />
+          {(isSampleRule && appMode === GLOBAL_CONSTANTS.APP_MODES.EXTENSION) ||
+          (MODE === RuleEditorMode.CREATE && isDetailsPanelShown) ? (
+            <RuleDetailsPanel
+              isSample={isSampleRule}
+              source="new_rule_editor"
+              handleSeeLiveRuleDemoClick={props.handleSeeLiveRuleDemoClick}
+              ruleDetails={
+                isSampleRule
+                  ? sampleRuleDetails[currentlySelectedRuleData.sampleId].details
+                  : RULE_DETAILS[currentlySelectedRuleData?.ruleType]
+              }
+            />
+          ) : null}
+
+          <Body
+            mode={MODE}
+            showDocs={isDocsVisible}
+            currentlySelectedRuleData={currentlySelectedRuleData}
+            currentlySelectedRuleConfig={currentlySelectedRuleConfig}
+          />
         </Col>
       </Row>
 

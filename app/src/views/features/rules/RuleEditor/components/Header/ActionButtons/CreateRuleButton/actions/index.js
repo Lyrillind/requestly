@@ -9,6 +9,10 @@ import { ResponseRuleResourceType } from "types/rules";
 import { parseHTMLString, getHTMLNodeName, validateHTMLTag, removeUrlAttribute } from "./insertScriptValidators";
 import { isFeatureCompatible } from "utils/CompatibilityUtils";
 import FEATURES from "config/constants/sub/features";
+import { countCapturingGroups } from "modules/extension/mv3RuleParser/utils";
+import { RE2JS } from "re2js";
+import { prettifyCode } from "componentsV2/CodeEditor/utils";
+import { EditorLanguage } from "componentsV2/CodeEditor";
 
 /**
  * In case of a few rules, input from the rule editor does not directly map to rule schema.
@@ -26,7 +30,15 @@ import FEATURES from "config/constants/sub/features";
  *  }
  * }>}
  */
-export const transformAndValidateRuleFields = (ruleData) => {
+export const transformAndValidateRuleFields = (rule) => {
+  const ruleData = { ...rule };
+
+  if (ruleData.isSample) {
+    delete ruleData.isReadOnly;
+    delete ruleData.sampleId;
+    delete ruleData.isSample;
+  }
+
   switch (ruleData.ruleType) {
     case GLOBAL_CONSTANTS.RULE_TYPES.SCRIPT: {
       if (!isFeatureCompatible(FEATURES.SCRIPT_RULE.ATTRIBUTES_SUPPORT)) {
@@ -195,6 +207,18 @@ export const validateRule = (rule, dispatch, appMode) => {
           message: `Please enter the part that needs to be replaced`,
           error: "missing from field",
         };
+      }
+
+      if (pair.source.operator === GLOBAL_CONSTANTS.RULE_OPERATORS.MATCHES) {
+        const hasCapturingGroup = !!countCapturingGroups(pair.source.value);
+
+        if (hasCapturingGroup) {
+          output = {
+            result: false,
+            message: `Capturing groups are not supported in the source regex`,
+            error: "capturing group present in source of replace rule",
+          };
+        }
       }
     });
   }
@@ -420,6 +444,23 @@ export const validateRule = (rule, dispatch, appMode) => {
           error: "file not selected",
         };
       }
+      // Response body shouldn't have invalid syntax
+      else if (pair.response.type === GLOBAL_CONSTANTS.RESPONSE_BODY_TYPES.CODE) {
+        const language =
+          pair.response.type === GLOBAL_CONSTANTS.RESPONSE_BODY_TYPES.CODE
+            ? EditorLanguage.JAVASCRIPT
+            : EditorLanguage.JSON;
+
+        const result = prettifyCode(pair.response.value, language);
+
+        if (!result.success) {
+          output = {
+            result: false,
+            message: "Response body contains invalid syntax!",
+            error: "invalid syntax",
+          };
+        }
+      }
     });
   }
 
@@ -442,6 +483,23 @@ export const validateRule = (rule, dispatch, appMode) => {
           message: message,
           error: "missing request body",
         };
+      }
+      // Request body shouldn't have invalid syntax
+      else if (pair.request.type === GLOBAL_CONSTANTS.REQUEST_BODY_TYPES.CODE) {
+        const language =
+          pair.request.type === GLOBAL_CONSTANTS.REQUEST_BODY_TYPES.CODE
+            ? EditorLanguage.JAVASCRIPT
+            : EditorLanguage.JSON;
+
+        const result = prettifyCode(pair.request.value, language);
+
+        if (!result.success) {
+          output = {
+            result: false,
+            message: "Request body contains invalid syntax!",
+            error: "invalid syntax",
+          };
+        }
       }
     });
   }
@@ -530,6 +588,18 @@ export const validateRule = (rule, dispatch, appMode) => {
       }
       return true;
     });
+
+    for (const pair of rule.pairs) {
+      if (pair.source.operator === GLOBAL_CONSTANTS.RULE_OPERATORS.MATCHES && !isRE2Compatible(pair.source.value)) {
+        const unsupportedFeatureMessage = checkUnsupportedRE2Features(pair.source.value);
+
+        return {
+          result: false,
+          message: "Invalid regex. " + unsupportedFeatureMessage,
+          error: "not re2 compatible",
+        };
+      }
+    }
   }
 
   if (output && output.result === false) {
@@ -547,5 +617,45 @@ export const ruleModifiedAnalytics = (user) => {
     const usageMetrics = httpsCallable(functions, "usageMetrics");
     const data = new Date().getTime();
     usageMetrics(data);
+  }
+};
+
+const checkUnsupportedRE2Features = (regexString) => {
+  const unsupportedFeaturesRegex = {
+    positive_lookahead: /\(\?=/,
+    negative_lookahead: /\(\?!/,
+    positive_lookbehind: /\(\?<=/,
+    negative_lookbehind: /\(\?<!/,
+    backreferences: /\\\d+/,
+    named_capture_groups: /\(\?<\w+>/,
+  };
+
+  const unsupportedFeaturesMessages = {
+    positive_lookahead: "The positive lookahead assertion (?=...) is not supported.",
+    negative_lookahead: "The negative lookahead assertion (?!...) is not supported.",
+    positive_lookbehind: "The positive lookbehind assertion (?<=...) is not supported.",
+    negative_lookbehind: "The negative lookbehind assertion (?<!...) is not supported.",
+    backreferences: "Backreferences such as \\1 are not supported.",
+    named_capture_groups: "Named capture groups such as (?<name>...) are not supported.",
+  };
+
+  let message = "Only RE2 regex syntax is supported.";
+
+  for (const [feature, regex] of Object.entries(unsupportedFeaturesRegex)) {
+    if (regexString.match(regex)) {
+      message = unsupportedFeaturesMessages[feature];
+      break;
+    }
+  }
+
+  return message;
+};
+
+const isRE2Compatible = (regexString) => {
+  try {
+    RE2JS.compile(regexString);
+    return true;
+  } catch (error) {
+    return false;
   }
 };

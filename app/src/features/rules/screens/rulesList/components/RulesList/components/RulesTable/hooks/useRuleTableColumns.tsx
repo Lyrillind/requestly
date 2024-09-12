@@ -1,6 +1,5 @@
 import { useSelector } from "react-redux";
-import { Link } from "react-router-dom";
-import { Button, Dropdown, MenuProps, Row, Switch, Table, Tooltip, Progress, Popconfirm } from "antd";
+import { Button, Dropdown, MenuProps, Row, Switch, Table, Tooltip, Popconfirm } from "antd";
 import moment from "moment";
 import { ContentListTableProps } from "componentsV2/ContentList";
 import { RuleTableRecord } from "../types";
@@ -13,23 +12,19 @@ import { MdOutlineShare } from "@react-icons/all-files/md/MdOutlineShare";
 import { MdOutlineMoreHoriz } from "@react-icons/all-files/md/MdOutlineMoreHoriz";
 import { RiFileCopy2Line } from "@react-icons/all-files/ri/RiFileCopy2Line";
 import { RiEdit2Line } from "@react-icons/all-files/ri/RiEdit2Line";
-import { RiInformationLine } from "@react-icons/all-files/ri/RiInformationLine";
 import { RiDeleteBinLine } from "@react-icons/all-files/ri/RiDeleteBinLine";
 import { PremiumFeature } from "features/pricing";
 import { FeatureLimitType } from "hooks/featureLimiter/types";
-import PATHS from "config/constants/sub/paths";
 import { isRule, isGroup } from "features/rules/utils";
 import { trackRulesListActionsClicked } from "features/rules/analytics";
 import { checkIsRuleGroupDisabled, normalizeRecord } from "../utils/rules";
-import { trackNewRuleButtonClicked, trackRuleToggleAttempted } from "modules/analytics/events/common/rules";
+import { trackRuleToggleAttempted } from "modules/analytics/events/common/rules";
 import { PREMIUM_RULE_TYPES } from "features/rules/constants";
 import APP_CONSTANTS from "config/constants";
 import { useRulesActionContext } from "features/rules/context/actions";
-import { SOURCE } from "modules/analytics/events/common/constants";
-import { RuleTypesDropdownWrapper } from "../../RuleTypesDropdownWrapper/RuleTypesDropdownWrapper";
 import { MdOutlinePushPin } from "@react-icons/all-files/md/MdOutlinePushPin";
-import { useTheme } from "styled-components";
 import { WarningOutlined } from "@ant-design/icons";
+import RuleNameColumn from "../components/RulesColumn/RulesColumn";
 
 const useRuleTableColumns = (options: Record<string, boolean>) => {
   const isWorkspaceMode = useSelector(getIsWorkspaceMode);
@@ -44,9 +39,9 @@ const useRuleTableColumns = (options: Record<string, boolean>) => {
     recordRenameAction,
     groupDeleteAction,
     recordsPinAction,
+    groupShareAction,
   } = useRulesActionContext();
   const isEditingEnabled = !(options && options.disableEditing);
-  const theme = useTheme();
 
   const columns: ContentListTableProps<RuleTableRecord>["columns"] = [
     Table.SELECTION_COLUMN,
@@ -88,76 +83,7 @@ const useRuleTableColumns = (options: Record<string, boolean>) => {
       width: isWorkspaceMode ? 322 : 376,
       ellipsis: true,
       render: (record: RuleTableRecord) => {
-        if (isRule(record)) {
-          return (
-            <div className="rule-name-container">
-              <Link
-                className="rule-name"
-                to={`${PATHS.RULE_EDITOR.EDIT_RULE.ABSOLUTE}/${record.id}`}
-                state={{ source: "my_rules" }}
-              >
-                {record.name}
-              </Link>
-
-              {record?.description ? (
-                <Tooltip title={record?.description} placement="right" showArrow={false}>
-                  <span className="rule-description-icon">
-                    <RiInformationLine />
-                  </span>
-                </Tooltip>
-              ) : null}
-            </div>
-          );
-        } else {
-          const group = record;
-          const totalRules = group.children?.length ?? 0;
-
-          const activeRulesCount = (group.children || []).reduce((count, rule) => {
-            return count + (rule.status === RecordStatus.ACTIVE ? 1 : 0);
-          }, 0);
-
-          return (
-            <div className="group-name-container">
-              <div className="group-name">{group.name}</div>
-
-              {totalRules > 0 ? (
-                <Tooltip
-                  placement="top"
-                  title={
-                    <>
-                      <div>Active rules: {activeRulesCount}</div>
-                      <div>Total rules: {totalRules}</div>
-                    </>
-                  }
-                >
-                  <div className="group-rules-count-details">
-                    <Progress
-                      strokeWidth={16}
-                      strokeColor={theme?.colors?.success}
-                      showInfo={false}
-                      type="circle"
-                      percent={(activeRulesCount / totalRules) * 100}
-                      size="small"
-                    />
-                    {activeRulesCount} / {totalRules}
-                  </div>
-                </Tooltip>
-              ) : null}
-
-              <RuleTypesDropdownWrapper groupId={group.id} analyticEventSource={SOURCE.RULE_GROUP}>
-                <Button
-                  className="add-rule-btn"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    trackNewRuleButtonClicked(SOURCE.RULE_GROUP);
-                  }}
-                >
-                  <span>+</span> <span>Add rule</span>
-                </Button>
-              </RuleTypesDropdownWrapper>
-            </div>
-          );
-        }
+        return <RuleNameColumn record={record} />;
       },
       onCell: (record: RuleTableRecord) => {
         if (isGroup(record)) {
@@ -256,7 +182,7 @@ const useRuleTableColumns = (options: Record<string, boolean>) => {
           } else {
             return (
               <PremiumFeature
-                disabled={record.status === RecordStatus.ACTIVE}
+                disabled={record.status === RecordStatus.ACTIVE || record.isSample}
                 features={
                   PREMIUM_RULE_TYPES.includes(record.ruleType)
                     ? [FeatureLimitType.num_active_rules, FeatureLimitType.response_rule]
@@ -308,7 +234,7 @@ const useRuleTableColumns = (options: Record<string, boolean>) => {
               {beautifiedDate} <UserIcon uid={record.lastModifiedBy} />
             </span>
           );
-        } else return beautifiedDate;
+        } else return <span className="rule-updated-on-cell">{beautifiedDate}</span>;
       },
       defaultSortOrder: "ascend",
       sortDirections: ["ascend", "descend", "ascend"],
@@ -351,6 +277,31 @@ const useRuleTableColumns = (options: Record<string, boolean>) => {
           },
           {
             key: 1,
+            onClick: (info) => {
+              info.domEvent?.stopPropagation?.();
+              groupShareAction(record as Group);
+            },
+            label: (
+              <Row>
+                <MdOutlineShare /> Share
+              </Row>
+            ),
+          },
+          {
+            key: 2,
+            onClick: (info) => {
+              info.domEvent?.stopPropagation?.();
+              recordDuplicateAction(normalizeRecord(record));
+            },
+            label: (
+              <Row>
+                <RiFileCopy2Line />
+                Duplicate
+              </Row>
+            ),
+          },
+          {
+            key: 3,
             danger: true,
             onClick: (info) => {
               info.domEvent?.stopPropagation?.();

@@ -15,6 +15,11 @@ CONSTANTS.APP_MODES = {
   REMOTE: "REMOTE",
 };
 
+CONSTANTS.APP_FLAVOURS = {
+  REQUESTLY: "REQUESTLY",
+  SESSIONBEAR: "SESSIONBEAR",
+};
+
 CONSTANTS.COMPANY_INFO = {
   SUPPORT_EMAIL: "contact@requestly.io",
 };
@@ -213,6 +218,9 @@ CONSTANTS.STORAGE_KEYS = {
   SEND_EXECUTION_EVENTS: "sendExecutionEvents",
   TEST_REPORTS: "testReports",
   IMPLICIT_RULE_TESTING_WIDGET_CONFIG: "implicit_rule_testing_widget_config",
+  BLOCKED_DOMAINS: "blocked_domains",
+  REFRESH_TOKEN: "refreshToken",
+  ACTIVE_WORKSPACE_ID: "activeWorkspaceId",
 };
 
 CONSTANTS.REQUEST_STATE = {
@@ -226,3 +234,8 @@ if (isReactApp) {
   /** For legacy apps- browser extension */
   Object.assign(window.RQ, CONSTANTS);
 }
+
+CONSTANTS.CLIENT_SOURCE = {
+  REQUESTLY: "requestly:client",
+  SESSIONBEAR: "sessionbear:client",
+};

@@ -5,21 +5,35 @@ import { Empty } from "antd";
 import APP_CONSTANTS from "config/constants";
 import { getUserAuthDetails } from "store/selectors";
 import { submitAttrUtil } from "utils/AnalyticsUtils";
-import { getIsWorkspaceMode } from "store/features/teams/selectors";
-import { MockRecordType, MockType, RQMockMetadataSchema } from "components/features/mocksV2/types";
+import { getCurrentlyActiveWorkspace, getIsWorkspaceMode } from "store/features/teams/selectors";
+import {
+  MockListSource,
+  MockRecordType,
+  MockType,
+  RQMockCollection,
+  RQMockMetadataSchema,
+} from "components/features/mocksV2/types";
 import { generateFinalUrl } from "components/features/mocksV2/utils";
-import { ContentListTable, useContentListTableContext, withContentListTableContext } from "componentsV2/ContentList";
+import {
+  ContentListTable,
+  ContentListTableProps,
+  useContentListTableContext,
+  withContentListTableContext,
+} from "componentsV2/ContentList";
 import { useMocksTableColumns } from "./hooks/useMocksTableColumns";
-import { enhanceRecords, isRecordMockCollection, recordsToContentTableDataAdapter } from "./utils";
+import { enhanceRecords, isCollection, recordsToContentTableDataAdapter } from "./utils";
 import { RiDeleteBin2Line } from "@react-icons/all-files/ri/RiDeleteBin2Line";
 import { ImUngroup } from "@react-icons/all-files/im/ImUngroup";
 import { RiFolderSharedLine } from "@react-icons/all-files/ri/RiFolderSharedLine";
+import { MdDownload } from "@react-icons/all-files/md/MdDownload";
 import { useMocksActionContext } from "features/mocks/contexts/actions";
 import PATHS from "config/constants/sub/paths";
 import { trackMocksListBulkActionPerformed } from "modules/analytics/events/features/mocksV2";
 import "./mocksTable.scss";
+import { updateMocksCollection } from "backend/mocks/updateMocksCollection";
 
 export interface MocksTableProps {
+  source: MockListSource;
   isLoading?: boolean;
   records: RQMockMetadataSchema[];
   filteredRecords: RQMockMetadataSchema[];
@@ -34,6 +48,7 @@ export interface MocksTableProps {
 }
 
 export const MocksTable: React.FC<MocksTableProps> = ({
+  source,
   records,
   filteredRecords,
   mockType,
@@ -50,6 +65,9 @@ export const MocksTable: React.FC<MocksTableProps> = ({
   const isRuleEditor = pathname.includes(PATHS.RULE_EDITOR.RELATIVE);
   const user = useSelector(getUserAuthDetails);
   const isWorkspaceMode = useSelector(getIsWorkspaceMode);
+  const workspace = useSelector(getCurrentlyActiveWorkspace);
+  const uid = user?.details?.profile?.uid;
+  const teamId = workspace?.id;
 
   useEffect(() => {
     if (!isWorkspaceMode) {
@@ -78,6 +96,7 @@ export const MocksTable: React.FC<MocksTableProps> = ({
 
   // TODO: move all actions in a hook and use that
   const columns = useMocksTableColumns({
+    source,
     mockType,
     handleNameClick,
     handleEditAction,
@@ -86,7 +105,7 @@ export const MocksTable: React.FC<MocksTableProps> = ({
     allRecordsMap,
   });
 
-  const { deleteRecordsAction, updateMocksCollectionAction, removeMocksFromCollectionAction } =
+  const { deleteRecordsAction, updateMocksCollectionAction, removeMocksFromCollectionAction, exportMocksAction } =
     useMocksActionContext() ?? {};
 
   const getBulkActionBarInfoText = useCallback((selectedRows: RQMockMetadataSchema[]) => {
@@ -94,7 +113,7 @@ export const MocksTable: React.FC<MocksTableProps> = ({
     let collections = 0;
 
     selectedRows.forEach((record) => {
-      isRecordMockCollection(record) ? collections++ : mocks++;
+      isCollection(record) ? collections++ : mocks++;
     });
 
     const formatCount = (count: number, singular: string, plural: string) => {
@@ -108,8 +127,51 @@ export const MocksTable: React.FC<MocksTableProps> = ({
     return `${collectionString}${collectionString && mockString ? " and " : ""}${mockString} selected`;
   }, []);
 
+  // TODO: move into actions
+  const updateCollectionOnDrop = useCallback(
+    (mockId: string, collectionId: string) => {
+      const mockIds = [mockId];
+      const collectionPath = ((allRecordsMap[collectionId] as unknown) as RQMockCollection)?.path ?? "";
+
+      updateMocksCollection(uid, mockIds, collectionId, collectionPath, teamId).then(() => {
+        forceRender();
+      });
+    },
+    [uid, teamId, forceRender, allRecordsMap]
+  );
+
+  const onRowDropped: ContentListTableProps<RQMockMetadataSchema>["onRowDropped"] = useCallback(
+    (dragRecordId, targetRecordId) => {
+      if (!dragRecordId || !targetRecordId) {
+        return;
+      }
+
+      const dragRecord = allRecordsMap[dragRecordId];
+      const targetRecord = allRecordsMap[targetRecordId];
+
+      if (dragRecord?.recordType === MockRecordType.COLLECTION) {
+        return;
+      }
+
+      if (dragRecord?.recordType === MockRecordType.MOCK) {
+        if (targetRecord?.recordType === MockRecordType.COLLECTION) {
+          if (dragRecord?.collectionId !== targetRecord?.id) {
+            updateCollectionOnDrop(dragRecord.id, targetRecord?.id);
+          }
+        } else if (targetRecord?.recordType === MockRecordType.MOCK) {
+          if ((dragRecord?.collectionId !== targetRecord?.collectionId, dragRecord)) {
+            updateCollectionOnDrop(dragRecord.id, targetRecord?.collectionId);
+          }
+        }
+      }
+    },
+    [allRecordsMap, updateCollectionOnDrop]
+  );
+
   return (
     <ContentListTable
+      dragAndDrop
+      onRowDropped={onRowDropped}
       loading={isLoading}
       id="mock-list-table"
       pagination={false}
@@ -132,7 +194,7 @@ export const MocksTable: React.FC<MocksTableProps> = ({
           onClick: (e) => {
             e.preventDefault();
 
-            if (isRecordMockCollection(record)) {
+            if (isCollection(record)) {
               return;
             }
 
@@ -174,6 +236,18 @@ export const MocksTable: React.FC<MocksTableProps> = ({
                       };
 
                       removeMocksFromCollectionAction(selectedRows, onSuccess);
+                    },
+                  },
+                  {
+                    label: "Export",
+                    icon: <MdDownload />,
+                    onClick: (selectedRows) => {
+                      const onSuccess = () => {
+                        trackMocksListBulkActionPerformed("export", mockType);
+                        clearSelectedRows();
+                      };
+
+                      exportMocksAction(selectedRows, onSuccess);
                     },
                   },
                   {

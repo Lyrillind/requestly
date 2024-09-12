@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Button, Tooltip } from "antd";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "utils/Toast.js";
 //UTILS
 import {
@@ -13,12 +13,12 @@ import {
 } from "../../../../../../../../store/selectors";
 import { trackRQLastActivity } from "../../../../../../../../utils/AnalyticsUtils";
 //Actions
-import { saveRule } from "../actions";
+import { saveRule, validateSyntaxInRule } from "../actions";
 import {
   getModeData,
   setIsCurrentlySelectedRuleHasUnsavedChanges,
 } from "../../../../../../../../components/features/rules/RuleBuilder/actions";
-import { transformAndValidateRuleFields, validateRule } from "./actions";
+import { validateRule } from "./actions";
 
 import { CONSTANTS as GLOBAL_CONSTANTS } from "@requestly/requestly-core";
 import APP_CONSTANTS from "../../../../../../../../config/constants";
@@ -34,19 +34,21 @@ import {
 } from "modules/analytics/events/common/rules";
 import { snakeCase } from "lodash";
 import { ResponseRuleResourceType } from "types/rules";
-import { runMinorFixesOnRule } from "utils/rules/misc";
 import { PremiumFeature } from "features/pricing";
 import { FeatureLimitType } from "hooks/featureLimiter/types";
 import { isExtensionInstalled } from "actions/ExtensionActions";
 import { actions } from "store";
-import { HTML_ERRORS } from "./actions/insertScriptValidators";
-import { toastType } from "componentsV2/CodeEditor/components/EditorToast/types";
 import { IncentivizeEvent } from "features/incentivization/types";
 import { RuleType } from "features/rules";
 import { incentivizationActions } from "store/features/incentivization/slice";
 import Logger from "../../../../../../../../../../common/logger";
 import { IncentivizationModal } from "store/features/incentivization/types";
 import { useIncentiveActions } from "features/incentivization/hooks";
+import { useIsNewUserForIncentivization } from "features/incentivization/hooks/useIsNewUserForIncentivization";
+import { INCENTIVIZATION_ENHANCEMENTS_RELEASE_DATE } from "features/incentivization/constants";
+import { SOURCE } from "modules/analytics/events/common/constants";
+import { AuthConfirmationPopover } from "components/hoc/auth/AuthConfirmationPopover";
+import { useFeatureValue } from "@growthbook/growthbook-react";
 import "../RuleEditorActionButtons.css";
 
 const getEventParams = (rule) => {
@@ -97,7 +99,6 @@ const getEventParams = (rule) => {
 
 // This is also the save rule button
 const CreateRuleButton = ({
-  location,
   isDisabled = false,
   isRuleEditorModal = false, // indicates if rendered from rule editor modal
   analyticEventRuleCreatedSource = "rule_editor_screen_header",
@@ -105,6 +106,7 @@ const CreateRuleButton = ({
   ruleEditorModalMode = APP_CONSTANTS.RULE_EDITOR_CONFIG.MODES.CREATE,
 }) => {
   //Constants
+  const location = useLocation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const ruleCreatedEventSource =
@@ -120,6 +122,8 @@ const CreateRuleButton = ({
   const userAttributes = useSelector(getUserAttributes);
 
   const { claimIncentiveRewards } = useIncentiveActions();
+  const isNewUserForIncentivization = useIsNewUserForIncentivization(INCENTIVIZATION_ENHANCEMENTS_RELEASE_DATE);
+  const onboardingVariation = useFeatureValue("onboarding_activation_v2", "variant1");
 
   const premiumRuleLimitType = useMemo(() => {
     switch (currentlySelectedRuleData.ruleType) {
@@ -182,13 +186,14 @@ const CreateRuleButton = ({
               newValue: true,
               newProps: {
                 event: incentiveEvent,
+                metadata: { rule_type: currentlySelectedRuleData.ruleType },
               },
             })
           );
         }
       });
     }
-  }, [currentlySelectedRuleData.ruleType, claimIncentiveRewards]);
+  }, [dispatch, currentlySelectedRuleData.ruleType, claimIncentiveRewards]);
 
   const handleFirstRuleCreationEvent = useCallback(async () => {
     claimIncentiveRewards({
@@ -208,22 +213,26 @@ const CreateRuleButton = ({
             newValue: true,
             newProps: {
               event: IncentivizeEvent.RULE_CREATED,
+              metadata: { rule_type: currentlySelectedRuleData.ruleType },
             },
           })
         );
       }
     });
-  }, [currentlySelectedRuleData.ruleType, claimIncentiveRewards]);
+  }, [dispatch, currentlySelectedRuleData.ruleType, claimIncentiveRewards]);
 
-  const claimRuleCreationRewards = useCallback(async () => {
-    if (userAttributes?.num_rules === 0) {
+  const claimRuleCreationRewards = async () => {
+    if (isNewUserForIncentivization) {
+      handleOtherRuleEvents();
+      return;
+    } else if (userAttributes?.num_rules === 0) {
       return handleFirstRuleCreationEvent().catch((err) => {
         Logger.log("Error in claiming rule creation rewards", err);
       });
     } else {
       handleOtherRuleEvents();
     }
-  }, [handleFirstRuleCreationEvent, userAttributes]);
+  };
 
   const handleBtnOnClick = async (saveType = "button_click") => {
     trackRuleSaveClicked(MODE);
@@ -236,121 +245,94 @@ const CreateRuleButton = ({
     const currentOwner = user?.details?.profile?.uid || null;
     const lastModifiedBy = user?.details?.profile?.uid || null;
 
-    //Pre-validation: regex fix + trim whitespaces
-    const fixedRuleData = runMinorFixesOnRule(dispatch, currentlySelectedRuleData);
+    //Validation
+    const ruleValidation = validateRule(currentlySelectedRuleData, dispatch, appMode);
+
     //Syntactic Validation
-    const syntaxValidation = await transformAndValidateRuleFields(fixedRuleData);
+    const finalRuleData = await validateSyntaxInRule(dispatch, { ...currentlySelectedRuleData });
 
-    if (!syntaxValidation.success) {
-      const validationError = syntaxValidation.validationError;
-      switch (validationError.error) {
-        case HTML_ERRORS.COULD_NOT_PARSE:
-        case HTML_ERRORS.UNCLOSED_TAGS:
-        case HTML_ERRORS.UNCLOSED_ATTRIBUTES:
-        case HTML_ERRORS.UNSUPPORTED_TAGS:
-        case HTML_ERRORS.MULTIPLE_TAGS:
-        case HTML_ERRORS.NO_TAGS:
-          dispatch(
-            actions.triggerToastForEditor({
-              id: validationError.id,
-              message: validationError.message,
-              type: toastType.ERROR,
-              autoClose: 4500,
-            })
-          );
-          break;
-        default:
-          toast.error(validationError.message || "Could Not Parse rule");
-          break;
-      }
+    if (!finalRuleData) {
+      return;
+    }
+
+    if (ruleValidation.result) {
+      saveRule(appMode, dispatch, {
+        ...finalRuleData,
+        createdBy,
+        currentOwner,
+        lastModifiedBy,
+      })
+        .then(() => setIsCurrentlySelectedRuleHasUnsavedChanges(dispatch, false))
+        .then(() => {
+          if (MODE === APP_CONSTANTS.RULE_EDITOR_CONFIG.MODES.CREATE) {
+            claimRuleCreationRewards();
+          }
+
+          if (isRuleEditorModal) {
+            ruleCreatedFromEditorModalCallback(finalRuleData.id);
+          } else {
+            toast.success(`Successfully ${currentActionText.toLowerCase()}d the rule`);
+          }
+
+          /* @sahil865gupta: Testing GA4 events and blending BQ data. Move this to separate module*/
+
+          let rule_type = null;
+
+          if (finalRuleData && finalRuleData.ruleType) {
+            rule_type = finalRuleData.ruleType;
+          }
+          if (MODE === APP_CONSTANTS.RULE_EDITOR_CONFIG.MODES.CREATE || isRuleEditorModal) {
+            trackRuleCreatedEvent({
+              rule_type,
+              description: finalRuleData.description,
+              destination_types:
+                finalRuleData.ruleType === GLOBAL_CONSTANTS.RULE_TYPES.REDIRECT
+                  ? getAllRedirectDestinationTypes(finalRuleData)
+                  : null,
+              source: ruleCreatedEventSource,
+              body_types:
+                finalRuleData.ruleType === GLOBAL_CONSTANTS.RULE_TYPES.RESPONSE
+                  ? getAllResponseBodyTypes(finalRuleData)
+                  : null,
+              ...getEventParams(finalRuleData),
+              save_type: saveType,
+            });
+          } else if (MODE === APP_CONSTANTS.RULE_EDITOR_CONFIG.MODES.EDIT) {
+            trackRuleEditedEvent({
+              rule_type,
+              description: finalRuleData.description,
+              destination_types:
+                finalRuleData.ruleType === GLOBAL_CONSTANTS.RULE_TYPES.REDIRECT
+                  ? getAllRedirectDestinationTypes(finalRuleData)
+                  : null,
+              source: ruleCreatedEventSource,
+              ...getEventParams(finalRuleData),
+              save_type: saveType,
+            });
+          }
+          ruleModifiedAnalytics(user);
+          trackRQLastActivity("rule_saved");
+
+          if (finalRuleData?.ruleType === GLOBAL_CONSTANTS.RULE_TYPES.RESPONSE) {
+            const resourceType = finalRuleData?.pairs?.[0]?.response?.resourceType;
+
+            if (resourceType && resourceType !== ResponseRuleResourceType.UNKNOWN) {
+              trackRuleResourceTypeSelected(GLOBAL_CONSTANTS.RULE_TYPES.RESPONSE, snakeCase(resourceType));
+            }
+          }
+        })
+        .then(() => {
+          if (!isRuleEditorModal && MODE === APP_CONSTANTS.RULE_EDITOR_CONFIG.MODES.CREATE) {
+            dispatch(actions.updateSecondarySidebarCollapse(true));
+            redirectToRuleEditor(navigate, finalRuleData.id, MODE, false, true);
+          }
+        })
+        .catch(() => {
+          toast.error("Error in saving rule. Please contact support.");
+        });
     } else {
-      const parsedRuleData = syntaxValidation.ruleData || fixedRuleData;
-      //Validation
-      const ruleValidation = validateRule(parsedRuleData, dispatch, appMode);
-      if (ruleValidation.result) {
-        saveRule(
-          appMode,
-          {
-            ...parsedRuleData,
-            createdBy,
-            currentOwner,
-            lastModifiedBy,
-          },
-          // updating `isCurrentlySelectedRuleHasUnsavedChanges` in the callback of saveRule
-          // because the navigation blocker prompt is dependent on this value so we need to
-          // update it before navigating away from the page
-          () => setIsCurrentlySelectedRuleHasUnsavedChanges(dispatch, false)
-        )
-          .then(async () => {
-            if (MODE === APP_CONSTANTS.RULE_EDITOR_CONFIG.MODES.CREATE) {
-              claimRuleCreationRewards();
-            }
-
-            if (isRuleEditorModal) {
-              ruleCreatedFromEditorModalCallback(currentlySelectedRuleData.id);
-            } else {
-              toast.success(`Successfully ${currentActionText.toLowerCase()}d the rule`);
-            }
-
-            /* @sahil865gupta: Testing GA4 events and blending BQ data. Move this to separate module*/
-
-            let rule_type = null;
-
-            if (currentlySelectedRuleData && currentlySelectedRuleData.ruleType) {
-              rule_type = currentlySelectedRuleData.ruleType;
-            }
-            if (MODE === APP_CONSTANTS.RULE_EDITOR_CONFIG.MODES.CREATE || isRuleEditorModal) {
-              trackRuleCreatedEvent({
-                rule_type,
-                description: currentlySelectedRuleData.description,
-                destination_types:
-                  currentlySelectedRuleData.ruleType === GLOBAL_CONSTANTS.RULE_TYPES.REDIRECT
-                    ? getAllRedirectDestinationTypes(currentlySelectedRuleData)
-                    : null,
-                source: ruleCreatedEventSource,
-                body_types:
-                  currentlySelectedRuleData.ruleType === GLOBAL_CONSTANTS.RULE_TYPES.RESPONSE
-                    ? getAllResponseBodyTypes(currentlySelectedRuleData)
-                    : null,
-                ...getEventParams(currentlySelectedRuleData),
-                save_type: saveType,
-              });
-            } else if (MODE === APP_CONSTANTS.RULE_EDITOR_CONFIG.MODES.EDIT) {
-              trackRuleEditedEvent({
-                rule_type,
-                description: currentlySelectedRuleData.description,
-                destination_types:
-                  currentlySelectedRuleData.ruleType === GLOBAL_CONSTANTS.RULE_TYPES.REDIRECT
-                    ? getAllRedirectDestinationTypes(currentlySelectedRuleData)
-                    : null,
-                source: ruleCreatedEventSource,
-                ...getEventParams(currentlySelectedRuleData),
-                save_type: saveType,
-              });
-            }
-            ruleModifiedAnalytics(user);
-            trackRQLastActivity("rule_saved");
-
-            if (currentlySelectedRuleData?.ruleType === GLOBAL_CONSTANTS.RULE_TYPES.RESPONSE) {
-              const resourceType = currentlySelectedRuleData?.pairs?.[0]?.response?.resourceType;
-
-              if (resourceType && resourceType !== ResponseRuleResourceType.UNKNOWN) {
-                trackRuleResourceTypeSelected(GLOBAL_CONSTANTS.RULE_TYPES.RESPONSE, snakeCase(resourceType));
-              }
-            }
-          })
-          .then(() => {
-            if (!isRuleEditorModal) {
-              redirectToRuleEditor(navigate, currentlySelectedRuleData.id, MODE);
-            }
-          })
-          .catch(() => {
-            toast.error("Error in saving rule. Please contact support.");
-          });
-      } else {
-        toast.warn(ruleValidation.message);
-        trackErrorInRuleCreation(snakeCase(ruleValidation.error), currentlySelectedRuleData.ruleType);
-      }
+      toast.warn(ruleValidation.message);
+      trackErrorInRuleCreation(snakeCase(ruleValidation.error), currentlySelectedRuleData.ruleType);
     }
   };
 
@@ -370,7 +352,28 @@ const CreateRuleButton = ({
     };
   }, [saveFn]);
 
-  return (
+  return onboardingVariation === "variant4" && !user?.details?.isLoggedIn ? (
+    <AuthConfirmationPopover
+      title={<div>You need to sign up to save the rule.</div>}
+      disabled={user?.details?.isLoggedIn}
+      onConfirm={handleBtnOnClick}
+      source={SOURCE.CREATE_NEW_RULE}
+      placement="bottomLeft"
+    >
+      <Tooltip title={tooltipText} placement="top">
+        <Button
+          data-tour-id="rule-editor-create-btn"
+          id="rule-editor-save-btn"
+          type="primary"
+          className="text-bold"
+          disabled={isDisabled}
+        >
+          {isCurrentlySelectedRuleHasUnsavedChanges ? "*" : null}
+          {`Save rule`}
+        </Button>
+      </Tooltip>
+    </AuthConfirmationPopover>
+  ) : (
     <>
       <PremiumFeature
         popoverPlacement="bottomLeft"

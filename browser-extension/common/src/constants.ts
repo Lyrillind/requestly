@@ -32,7 +32,10 @@ export const EXTENSION_MESSAGES = {
   NOTIFY_TEST_RULE_REPORT_UPDATED: "notifyTestRuleReportUpdated",
   TEST_RULE_ON_URL: "testRuleOnUrl",
   RULE_EXECUTED: "ruleExecuted",
+  NOTIFY_RECORD_UPDATED_IN_POPUP: "notifyRecordUpdatedInPopup",
   RULE_SAVE_ERROR: "ruleSaveError",
+  IS_EXTENSION_BLOCKED_ON_TAB: "isExtensionBlockedOnTab",
+  CACHE_SHARED_STATE: "cacheSharedState",
 };
 
 export const CLIENT_MESSAGES = {
@@ -48,7 +51,6 @@ export const CLIENT_MESSAGES = {
   START_RECORDING: "startRecording",
   STOP_RECORDING: "stopRecording",
   IS_EXPLICIT_RECORDING_SESSION: "isExplicitRecordingSession",
-  NOTIFY_RECORD_UPDATED_IN_POPUP: "notifyRecordUpdatedInPopup",
   NOTIFY_PAGE_LOADED_FROM_CACHE: "notifyPageLoadedFromCache",
   ON_BEFORE_AJAX_REQUEST_PROCESSED: "onBeforeAjaxRequest:processed",
   ON_ERROR_OCCURRED_PROCESSED: "onErrorOccurred:processed",
@@ -56,6 +58,7 @@ export const CLIENT_MESSAGES = {
   START_IMPLICIT_RULE_TESTING: "startImplicitRuleTesting",
   SYNC_APPLIED_RULES: "syncAppliedRules",
   NOTIFY_RULE_EXECUTED: "notifyRuleExecuted",
+  NOTIFY_RECORD_UPDATED: "notifyRecordUpdated",
 };
 
 export const STORAGE_TYPE = "local";
@@ -80,6 +83,7 @@ export const STORAGE_KEYS = {
   LAST_UPDATED_TS: "last-updated-ts",
   TEST_REPORTS: "testReports",
   IMPLICIT_RULE_TESTING_WIDGET_CONFIG: "implicit_rule_testing_widget_config",
+  BLOCKED_DOMAINS: "blocked_domains",
 };
 
 export const LINKS = {

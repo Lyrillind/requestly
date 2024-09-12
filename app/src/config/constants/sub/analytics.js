@@ -146,6 +146,7 @@ export const GA_EVENTS = {
     SESSION_REPLAY_ENABLED: "session_replay_enabled",
 
     PERSONA: "persona",
+    INDUSTRY: "industry",
 
     SIGNUP_DATE: "SIGNUP_DATE",
     DAYS_SINCE_SIGNUP: "days_since_signup",
@@ -164,6 +165,8 @@ export const GA_EVENTS = {
     NUM_WORKSPACES: "num_workspaces",
     SESSION_REPLAY_LIFETIME_REDEEMED: "session_replay_lifetime_redeemed",
     COMPANY_USER_SERIAL: "company_user_serial",
+    APP_FLAVOUR: "app_flavour",
+    SESSIONBEAR_INSTALLED: "sessionbear_installed",
   },
   VALUES: {
     PAYPAL: "paypal",

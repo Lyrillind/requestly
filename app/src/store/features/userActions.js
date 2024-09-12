@@ -6,15 +6,15 @@ export const updateUserInfo = (prevState, action) => {
       ...action.payload.details,
     };
     prevState.user.details.planDetails = {
-      "planId": "professional",
-      "status": "active",
-      "subscription": {
-        "endDate": "2099-07-05",
-        "startDate": "2014-06-28",
-        "id": "sub_1PWbinDiNNz2hbmOLtXAjRmM"
+      planId: "professional",
+      status: "active",
+      subscription: {
+        endDate: "2099-07-05",
+        startDate: "2014-06-28",
+        id: "sub_1PWbinDiNNz2hbmOLtXAjRmM",
       },
-      "type": "individual",
-      "planName": "professional"
+      type: "individual",
+      planName: "professional",
     };
     prevState.user.details.isPremium = true;
   } else {
@@ -34,15 +34,15 @@ export const updateUserPlanDetails = (prevState, action) => {
   // prevState.user.details.planDetails = action.payload.userPlanDetails;
   // prevState.user.details.isPremium = action.payload.isUserPremium;
   prevState.user.details.planDetails = {
-    "planId": "professional",
-    "status": "active",
-    "subscription": {
-      "endDate": "2099-07-05",
-      "startDate": "2014-06-28",
-      "id": "sub_1PWbinDiNNz2hbmOLtXAjRmM"
+    planId: "professional",
+    status: "active",
+    subscription: {
+      endDate: "2099-07-05",
+      startDate: "2014-06-28",
+      id: "sub_1PWbinDiNNz2hbmOLtXAjRmM",
     },
-    "type": "individual",
-    "planName": "professional"
+    type: "individual",
+    planName: "professional",
   };
   prevState.user.details.isPremium = true;
 };
@@ -58,6 +58,10 @@ export const updateSecondarySidebarCollapse = (prevState, action) => {
 
 export const updateUsername = (prevState, action) => {
   prevState.user.details.username = action.payload.username;
+};
+
+export const updateUserDisplayName = (prevState, action) => {
+  prevState.user.details.profile.displayName = action.payload;
 };
 
 export const updateUserLimitReached = (prevState, action) => {
@@ -162,6 +166,10 @@ export const updateAppOnboardingPersona = (prevState, action) => {
   prevState.appOnboarding.persona = action.payload;
 };
 
+export const updateAppOnboardingIndustry = (prevState, action) => {
+  prevState.appOnboarding.industry = action.payload;
+};
+
 export const updateAppOnboardingFullName = (prevState, action) => {
   prevState.appOnboarding.fullName = action.payload;
 };
@@ -213,6 +221,18 @@ export const updatePlanExpiredBannerClosed = (prevState, action) => {
   prevState.misc.persist.isPlanExpiredBannerClosed = action.payload;
 };
 
+export const updateIsManageBillingTeamAlertVisible = (prevState, action) => {
+  prevState.misc.persist.isManageBillingTeamAlertVisible = action.payload;
+};
+
 export const updateIsAppBannerVisible = (prevState, action) => {
   prevState.misc.nonPersist.isAppBannerVisible = action.payload;
+};
+
+export const updateIsSupportChatOpened = (prevState, action) => {
+  prevState.misc.persist.isSupportChatOpened = action.payload;
+};
+
+export const updateIsCodeEditorFullScreenModeOnboardingCompleted = (prevState, action) => {
+  prevState.misc.persist.isCodeEditorFullScreenModeOnboardingCompleted = action.payload;
 };

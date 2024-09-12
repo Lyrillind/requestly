@@ -2,14 +2,13 @@ import React, { useState, useMemo, useCallback, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { actions } from "store";
 import { getCurrentlySelectedRuleConfig, getCurrentlySelectedRuleData } from "store/selectors";
-import { Row, Col, Input, Badge, Menu, Typography } from "antd";
+import { Row, Col, Input, Badge, Menu, Typography, Tooltip } from "antd";
 import { FaFilter } from "@react-icons/all-files/fa/FaFilter";
 import { ExperimentOutlined } from "@ant-design/icons";
 import { CONSTANTS as GLOBAL_CONSTANTS } from "@requestly/requestly-core";
 import APP_CONSTANTS from "config/constants";
 import { DownOutlined } from "@ant-design/icons";
 import { RQDropdown, RQButton } from "lib/design-system/components";
-import { MoreInfo } from "components/misc/MoreInfo";
 import { TestURLModal } from "components/common/TestURLModal";
 import PATHS from "config/constants/sub/paths";
 import { generatePlaceholderText } from "components/features/rules/RulePairs/utils";
@@ -22,6 +21,8 @@ import {
 } from "modules/analytics/events/features/testUrlModal";
 import { trackRuleFilterModalToggled } from "modules/analytics/events/common/rules/filters";
 import "./RequestSourceRow.css";
+import { isFeatureCompatible } from "utils/CompatibilityUtils";
+import FEATURES from "config/constants/sub/features";
 
 const { Text } = Typography;
 
@@ -172,6 +173,14 @@ const RequestSourceRow = ({ rowIndex, pair, pairIndex, ruleDetails, isInputDisab
     );
   }, [dispatch, sourceOperators, pairIndex]);
 
+  const shouldShowFilterIcon = useMemo(() => {
+    if (ruleDetails.TYPE === GLOBAL_CONSTANTS.RULE_TYPES.SCRIPT) {
+      return isFeatureCompatible(FEATURES.SCRIPT_RULE_SOURCE_FILTER);
+    }
+
+    return ruleDetails.ALLOW_REQUEST_SOURCE_FILTERS;
+  }, [ruleDetails.ALLOW_REQUEST_SOURCE_FILTERS, ruleDetails.TYPE]);
+
   const updateSourceFromTestURLModal = (newSource) => {
     const updatedSource = { ...pair.source, ...newSource };
 
@@ -288,19 +297,28 @@ const RequestSourceRow = ({ rowIndex, pair, pairIndex, ruleDetails, isInputDisab
               data-selectionid="source-value"
             />
           </Col>
-          <RQButton
-            className={`test-url-btn  ${shouldStartTestURLRippleEffect() && "ripple-animation"}`}
-            iconOnly
-            icon={<ExperimentOutlined />}
-            type="default"
-            disabled={!pair.source.value || isInputDisabled}
-            onClick={() => {
-              setIsTestURLClicked(true);
-              setIsTestURLModalVisible(true);
-            }}
-          />
+          <Tooltip
+            overlayClassName="rq-tooltip"
+            title={"Enter the source condition first"}
+            placement="left"
+            trigger={isInputDisabled ? ["hover"] : []}
+          >
+            <span>
+              <RQButton
+                className={`test-url-btn  ${shouldStartTestURLRippleEffect() && "ripple-animation"}`}
+                iconOnly
+                icon={<ExperimentOutlined />}
+                type="default"
+                disabled={!pair.source.value || isInputDisabled}
+                onClick={() => {
+                  setIsTestURLClicked(true);
+                  setIsTestURLModalVisible(true);
+                }}
+              />
+            </span>
+          </Tooltip>
         </Row>
-        {ruleDetails.ALLOW_REQUEST_SOURCE_FILTERS ? (
+        {shouldShowFilterIcon ? (
           <Col
             align="right"
             className="source-filter-col"
@@ -309,8 +327,10 @@ const RequestSourceRow = ({ rowIndex, pair, pairIndex, ruleDetails, isInputDisab
             }}
           >
             {!isInputDisabled && (
-              <MoreInfo
-                text={
+              <Tooltip
+                placement="left"
+                overlayClassName="rq-tooltip"
+                title={
                   <>
                     Advanced filters like resource type, request method to target requests when rule should be applied.{" "}
                     <a
@@ -336,7 +356,7 @@ const RequestSourceRow = ({ rowIndex, pair, pairIndex, ruleDetails, isInputDisab
                     <Badge style={{ color: "#465967", backgroundColor: "#E5EAEF" }}>{getFilterCount(pairIndex)}</Badge>
                   ) : null}
                 </span>
-              </MoreInfo>
+              </Tooltip>
             )}
           </Col>
         ) : null}

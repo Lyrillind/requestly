@@ -38,9 +38,17 @@ export const SESSION_RECORDING = {
   },
   network: {
     import: {
-      btn_clicked: "import_external_har_button_clicked",
-      completed: "import_external_har_completed",
-      canceled: "import_external_har_canceled",
+      har: {
+        btn_clicked: "import_external_har_button_clicked",
+        completed: "import_external_har_completed",
+        canceled: "import_external_har_canceled",
+      },
+
+      web_sessions: {
+        btn_clicked: "import_web_session_button_clicked",
+        completed: "import_web_session_completed",
+        canceled: "import_web_session_canceled",
+      },
     },
     delete: {
       btn_clicked: "delete_network_session_clicked_from_list",
@@ -132,7 +140,13 @@ export const MOCKSV2 = {
   MOCK_UPLOAD_WORKFLOW_STARTED: "mock_upload_workflow_started",
   MOCK_UPLOADED: "mock_uploaded",
   MOCK_UPLOAD_FAILED: "mock_upload_failed",
+  MOCKS_EXPORTED: "mocks_exported",
+  MOCK_IMPORT_BUTTON_CLICKED: "mock_import_button_clicked",
+  MOCKS_JSON_PARSED: "mocks_json_parsed",
+  MOCKS_IMPORT_FAILED: "mocks_import_failed",
+  MOCKS_IMPORT_COMPLETED: "mocks_import_completed",
   TEST_MOCK_CLICKED: "test_mock_clicked",
+  MOCKS_LIST_FILTER_CHANGED: "mocks_list_filter_changed",
 
   AI_MOCK_RESPONSE_BUTTON_CLICKED: "ai_mock_response_button_clicked",
   AI_MOCK_RESPONSE_GENERATE_CLICKED: "ai_mock_response_generate_clicked",
@@ -250,8 +264,15 @@ export const RULE_EDITOR = {
 export const TEMPLATES = {
   IMPORT_STARTED: "template_import_started",
   IMPORT_COMPLETED: "template_import_completed",
+  VIEW_ALL_TEMPLATES_CLICK: "view_all_templates_click",
+  USE_TEMPLATE_CLICK: "use_template_click",
 };
 
 export const ECOSYSTEM = {
   ECOSYSTEM_FEATURE_CLICKED: "ecosystem_feature_clicked",
+};
+
+export const API_SECURITY_TESTING = {
+  API_SECURITY_TESTING_LANDING_PAGE_VIEWED: "api_security_landing_page_viewed",
+  API_SECURITY_TESTING_START_PRESSED: "api_security_start_pressed",
 };

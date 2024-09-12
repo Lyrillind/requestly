@@ -1,25 +1,42 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { useFeatureIsOn, useFeatureValue } from "@growthbook/growthbook-react";
 import { Empty } from "antd";
 import useRuleTableColumns from "./hooks/useRuleTableColumns";
 import { recordsToContentTableDataAdapter } from "./utils";
 import { isRule, isGroup } from "features/rules/utils";
-import { RecordStatus, StorageRecord } from "features/rules/types/rules";
+import { RecordStatus, RecordType, StorageRecord } from "features/rules/types/rules";
 import { RuleTableRecord } from "./types";
 import { RiDeleteBin2Line } from "@react-icons/all-files/ri/RiDeleteBin2Line";
 import { RiUserSharedLine } from "@react-icons/all-files/ri/RiUserSharedLine";
 import { RiFolderSharedLine } from "@react-icons/all-files/ri/RiFolderSharedLine";
 import { MdOutlineToggleOn } from "@react-icons/all-files/md/MdOutlineToggleOn";
 import { ImUngroup } from "@react-icons/all-files/im/ImUngroup";
-import { getIsAppBannerVisible, getUserAuthDetails } from "store/selectors";
+import {
+  getAppMode,
+  getIsAppBannerVisible,
+  getIsSampleRulesImported,
+  getIsRefreshRulesPending,
+  getUserAuthDetails,
+} from "store/selectors";
 import { toast } from "utils/Toast";
-import { trackRulesListBulkActionPerformed, trackRulesSelected } from "features/rules/analytics";
+import {
+  trackRulesListBulkActionPerformed,
+  trackRulesSelected,
+  trackSampleRulesImported,
+} from "features/rules/analytics";
 import { getAllRecords } from "store/features/rules/selectors";
 import { PREMIUM_RULE_TYPES } from "features/rules/constants";
-import { enhanceRecords, normalizeRecords } from "./utils/rules";
-import { ContentListTable, useContentListTableContext, withContentListTableContext } from "componentsV2/ContentList";
+import {
+  ContentListTable,
+  ContentListTableProps,
+  useContentListTableContext,
+  withContentListTableContext,
+} from "componentsV2/ContentList";
+import { enhanceRecords, importSampleRules, normalizeRecords } from "./utils/rules";
 import { useRulesActionContext } from "features/rules/context/actions";
+import { actions } from "store";
+import { getCurrentlyActiveWorkspace } from "store/features/teams/selectors";
 import "./rulesTable.css";
 
 interface Props {
@@ -32,10 +49,16 @@ interface Props {
 const RulesTable: React.FC<Props> = ({ records, loading, searchValue, allRecordsMap }) => {
   const { selectedRows, clearSelectedRows } = useContentListTableContext();
 
+  const dispatch = useDispatch();
+  const appMode = useSelector(getAppMode);
   const user = useSelector(getUserAuthDetails);
   const allRecords = useSelector(getAllRecords);
   const isAppBannerVisible = useSelector(getIsAppBannerVisible);
+  const isSampleRulesImported = useSelector(getIsSampleRulesImported);
+  const isRulesListRefreshPending = useSelector(getIsRefreshRulesPending);
+  const currentlyActiveWorkspace = useSelector(getCurrentlyActiveWorkspace);
 
+  const [groupIdsToExpand, setGroupIdsToExpand] = useState<string[]>([]);
   const [contentTableData, setContentTableData] = useState<RuleTableRecord[]>([]);
   const [isPremiumRulesToggleChecked, setIsPremiumRulesToggleChecked] = useState(false);
   const [isBulkRecordsStatusUpdating, setIsBulkRecordsStatusUpdating] = useState(false);
@@ -49,7 +72,47 @@ const RulesTable: React.FC<Props> = ({ records, loading, searchValue, allRecords
     recordsShareAction,
     recordsDeleteAction,
     recordsStatusUpdateAction,
+    updateGroupOnDrop,
   } = useRulesActionContext();
+
+  const isRuleExist = allRecords?.length > 0;
+
+  useEffect(() => {
+    if (!user.loggedIn) {
+      return;
+    }
+
+    if (isSampleRulesImported) {
+      return;
+    }
+
+    if (!isRuleExist) {
+      return;
+    }
+
+    if (!currentlyActiveWorkspace || currentlyActiveWorkspace?.id) {
+      return;
+    }
+
+    importSampleRules(user, appMode).then((groupIdsToExpand: string[]) => {
+      if (groupIdsToExpand?.length > 0) {
+        setGroupIdsToExpand(groupIdsToExpand);
+      }
+
+      trackSampleRulesImported();
+
+      // @ts-ignore
+      dispatch(actions.updateIsSampleRulesImported(true));
+
+      dispatch(
+        // @ts-ignore
+        actions.updateRefreshPendingStatus({
+          type: "rules",
+          newValue: !isRulesListRefreshPending,
+        })
+      );
+    });
+  }, [user, appMode, isRuleExist, isSampleRulesImported, currentlyActiveWorkspace?.id, isRulesListRefreshPending]);
 
   useEffect(() => {
     const enhancedRecords = enhanceRecords(records, allRecordsMap);
@@ -152,13 +215,44 @@ const RulesTable: React.FC<Props> = ({ records, loading, searchValue, allRecords
     return classNames;
   };
 
+  const onRowDropped: ContentListTableProps<RuleTableRecord>["onRowDropped"] = useCallback(
+    (sourceRecordId, targetRecordId) => {
+      if (!sourceRecordId || !targetRecordId) {
+        return;
+      }
+
+      const dragRecord = allRecordsMap[sourceRecordId];
+      const targetRecord = allRecordsMap[targetRecordId];
+
+      if (dragRecord?.objectType === RecordType.GROUP) {
+        return;
+      }
+
+      if (dragRecord?.objectType === RecordType.RULE) {
+        if (targetRecord?.objectType === RecordType.GROUP) {
+          if (dragRecord?.groupId !== targetRecord?.id) {
+            updateGroupOnDrop(dragRecord, targetRecord?.id);
+          }
+        } else if (targetRecord?.objectType === RecordType.RULE) {
+          if ((dragRecord?.groupId !== targetRecord?.groupId, dragRecord)) {
+            updateGroupOnDrop(dragRecord, targetRecord?.groupId);
+          }
+        }
+      }
+    },
+    [allRecordsMap, updateGroupOnDrop]
+  );
+
   return (
     <>
       {/* Add Modals Required in Rules List here */}
 
       <ContentListTable
+        dragAndDrop
+        onRowDropped={onRowDropped}
         id="rules-list-table"
         className="rules-list-table"
+        defaultExpandedRowKeys={groupIdsToExpand}
         size="middle"
         scroll={{ y: getTableScrollHeight() }}
         columns={columns}

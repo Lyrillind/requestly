@@ -1,17 +1,14 @@
 import React, { createContext, useCallback, useContext } from "react";
-import { Group, RecordStatus, RuleType, StorageRecord } from "features/rules/types/rules";
+import { Group, RecordStatus, Rule, StorageRecord } from "features/rules/types/rules";
 import {
   trackNewRuleButtonClicked,
-  trackRuleCreationWorkflowStartedEvent,
   trackRulePinToggled,
   trackRuleToggled,
 } from "modules/analytics/events/common/rules";
-import { redirectToCreateNewRule } from "utils/RedirectionUtils";
-import { useNavigate } from "react-router-dom";
 import { useRulesModalsContext } from "./modals";
 import { isGroup, isRule } from "../utils";
 import RULES_LIST_TABLE_CONSTANTS from "config/constants/sub/rules-list-table-constants";
-import { getAppMode, getUserAttributes, getUserAuthDetails } from "store/selectors";
+import { getAppMode, getIsRefreshRulesPending, getUserAttributes, getUserAuthDetails } from "store/selectors";
 import { useDispatch, useSelector } from "react-redux";
 import { recordsActions } from "store/features/rules/slice";
 import { StorageService } from "init";
@@ -19,13 +16,22 @@ import { trackShareButtonClicked } from "modules/analytics/events/misc/sharing";
 import { actions } from "store";
 import Logger from "lib/logger";
 import { toast } from "utils/Toast";
-import { trackGroupPinToggled, trackGroupStatusToggled } from "../analytics";
+import {
+  trackGroupChangedEvent,
+  trackGroupPinToggled,
+  trackGroupStatusToggled,
+  trackSampleRuleToggled,
+} from "../analytics";
 import { submitAttrUtil, trackRQLastActivity } from "utils/AnalyticsUtils";
 import APP_CONSTANTS from "config/constants";
+import { RuleTableRecord } from "../screens/rulesList/components/RulesList/components/RulesTable/types";
+import { updateGroupOfSelectedRules } from "components/features/rules/ChangeRuleGroupModal/actions";
+import { getAllRulesOfGroup } from "utils/rules/misc";
+import { SOURCE } from "modules/analytics/events/common/constants";
 
 // FIXME: Make all bulk actions async to handle loading state properly
 type RulesActionContextType = {
-  createRuleAction: (ruleType?: RuleType, source?: string, groupId?: string | undefined) => void;
+  createRuleAction: (source?: string) => void;
   createGroupAction: () => void;
   importRecordsAction: () => void;
   recordsUngroupAction: (records: StorageRecord[]) => Promise<any>; // TODO: add proper type
@@ -38,6 +44,8 @@ type RulesActionContextType = {
   recordRenameAction: (record: StorageRecord) => void;
   groupDeleteAction: (group: Group) => void;
   recordsPinAction: (records: StorageRecord[]) => void;
+  updateGroupOnDrop: (record: RuleTableRecord, groupId: string, onSuccess?: () => void) => void;
+  groupShareAction: (group: Group, onSuccess?: () => void) => void;
 };
 
 const RulesActionContext = createContext<RulesActionContextType>(null);
@@ -50,11 +58,11 @@ const { UNGROUPED_GROUP_ID } = RULES_LIST_TABLE_CONSTANTS;
 
 export const RulesActionContextProvider: React.FC<RulesProviderProps> = ({ children }) => {
   const dispatch = useDispatch();
-  const navigate = useNavigate();
 
   const appMode = useSelector(getAppMode);
   const user = useSelector(getUserAuthDetails);
   const userAttributes = useSelector(getUserAttributes);
+  const isRulesListRefreshPending = useSelector(getIsRefreshRulesPending);
 
   const {
     openCreateGroupModalAction,
@@ -96,22 +104,12 @@ export const RulesActionContextProvider: React.FC<RulesProviderProps> = ({ child
     },
     [appMode, dispatch]
   );
-  /*****/
 
-  // FIXME: Remove hard coded event source values and refactor this action
-  const createRuleAction = useCallback(
-    (ruleType?: RuleType, source = "", groupId = "") => {
-      Logger.log("[DEBUG]", "createRuleAction");
-      if (ruleType) {
-        trackRuleCreationWorkflowStartedEvent(ruleType, source);
-      } else {
-        trackNewRuleButtonClicked("in_app");
-      }
-      redirectToCreateNewRule(navigate, ruleType, source || "my_rules", groupId);
-      return;
-    },
-    [navigate]
-  );
+  const createRuleAction = useCallback((source = "") => {
+    Logger.log("[DEBUG]", "createRuleAction");
+    trackNewRuleButtonClicked(source);
+    return;
+  }, []);
 
   const createGroupAction = useCallback(() => {
     Logger.log("[DEBUG]", "createGroupAction");
@@ -164,6 +162,7 @@ export const RulesActionContextProvider: React.FC<RulesProviderProps> = ({ child
         const ruleIds = rulesToShare.map((rule) => rule.id);
 
         dispatch(
+          // @ts-ignore
           actions.toggleActiveModal({
             modalName: "sharingModal",
             newValue: true,
@@ -175,6 +174,7 @@ export const RulesActionContextProvider: React.FC<RulesProviderProps> = ({ child
         );
       } else {
         dispatch(
+          // @ts-ignore
           actions.toggleActiveModal({
             modalName: "authModal",
             newValue: true,
@@ -210,11 +210,16 @@ export const RulesActionContextProvider: React.FC<RulesProviderProps> = ({ child
           ...record,
           status: newStatus,
         };
+        const isSampleRule = updatedRecord.isSample;
 
         Logger.log("Writing storage in RulesTable changeRuleStatus");
 
         return updateRecordInStorage(updatedRecord, record).then(() => {
           const isRecordRule = isRule(record);
+
+          if (record.isSample) {
+            trackSampleRuleToggled(record.name, newStatus, SOURCE.RULES_LIST);
+          }
 
           if (!isRecordRule) {
             trackGroupStatusToggled(newStatus === "Active");
@@ -223,11 +228,18 @@ export const RulesActionContextProvider: React.FC<RulesProviderProps> = ({ child
 
           if (newStatus.toLowerCase() === "active") {
             trackRQLastActivity("rule_activated");
-            submitAttrUtil(APP_CONSTANTS.GA_EVENTS.ATTR.NUM_ACTIVE_RULES, userAttributes.num_active_rules + 1);
+
+            submitAttrUtil(
+              APP_CONSTANTS.GA_EVENTS.ATTR.NUM_ACTIVE_RULES,
+              userAttributes.num_active_rules + (isSampleRule ? 0 : 1)
+            );
             trackRuleToggled(record.ruleType, "rules_list", newStatus);
           } else {
             trackRQLastActivity("rule_deactivated");
-            submitAttrUtil(APP_CONSTANTS.GA_EVENTS.ATTR.NUM_ACTIVE_RULES, userAttributes.num_active_rules - 1);
+            submitAttrUtil(
+              APP_CONSTANTS.GA_EVENTS.ATTR.NUM_ACTIVE_RULES,
+              userAttributes.num_active_rules - (isSampleRule ? 0 : 1)
+            );
             trackRuleToggled(record.ruleType, "rules_list", newStatus);
           }
         });
@@ -268,9 +280,6 @@ export const RulesActionContextProvider: React.FC<RulesProviderProps> = ({ child
   const recordDuplicateAction = useCallback(
     (record: StorageRecord) => {
       Logger.log("[DEBUG]", "recordDuplicateAction", record);
-      if (isGroup(record)) {
-        return;
-      }
 
       openDuplicateRecordModalAction(record);
     },
@@ -330,6 +339,60 @@ export const RulesActionContextProvider: React.FC<RulesProviderProps> = ({ child
     [updateRecordInStorage, user?.details?.profile?.uid]
   );
 
+  const updateGroupOnDrop = useCallback(
+    (record: RuleTableRecord, groupId: string = "", onSuccess = () => {}) => {
+      if (!record) {
+        return;
+      }
+
+      updateGroupOfSelectedRules(appMode, [record.id], groupId, user).then(() => {
+        trackGroupChangedEvent("rules_list_drag_and_drop");
+        onSuccess();
+        // @ts-ignore
+        dispatch(actions.updateRefreshPendingStatus({ type: "rules", newValue: !isRulesListRefreshPending }));
+      });
+    },
+    [appMode, user, isRulesListRefreshPending]
+  );
+
+  const groupShareAction = useCallback(
+    async (group: Group, onSuccess?: () => void) => {
+      if (!group) return;
+      if (user.loggedIn) {
+        const groupRules = await getAllRulesOfGroup(appMode, group.id);
+        const ruleIds = groupRules.map((rule: Rule) => rule.id);
+
+        dispatch(
+          // @ts-ignore
+          actions.toggleActiveModal({
+            modalName: "sharingModal",
+            newValue: true,
+            newProps: {
+              callback: onSuccess,
+              selectedRules: ruleIds,
+            },
+          })
+        );
+      } else {
+        dispatch(
+          // @ts-ignore
+          actions.toggleActiveModal({
+            modalName: "authModal",
+            newValue: true,
+            newProps: {
+              redirectURL: window.location.href,
+              src: APP_CONSTANTS.FEATURES.RULES,
+              userActionMessage: "Sign up to generate a public shareable link",
+              authMode: APP_CONSTANTS.AUTH.ACTION_LABELS.SIGN_UP,
+              eventSource: "rules_list",
+            },
+          })
+        );
+      }
+    },
+    [appMode, user, isRulesListRefreshPending]
+  );
+
   const value = {
     createRuleAction,
     createGroupAction,
@@ -344,6 +407,8 @@ export const RulesActionContextProvider: React.FC<RulesProviderProps> = ({ child
     recordRenameAction,
     groupDeleteAction,
     recordsPinAction,
+    updateGroupOnDrop,
+    groupShareAction,
   };
 
   return <RulesActionContext.Provider value={value}>{children}</RulesActionContext.Provider>;

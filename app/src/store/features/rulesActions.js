@@ -32,6 +32,10 @@ export const updateIsRulesListLoading = (prevState, action) => {
   prevState.rules.isRulesListLoading = action.payload;
 };
 
+export const updateIsSampleRulesImported = (prevState, action) => {
+  prevState.rules.isSampleRulesImported = action.payload;
+};
+
 export const updateRefreshPendingStatus = (prevState, action) => {
   prevState.pendingRefresh[action.payload.type] = action.payload.newValue
     ? action.payload.newValue
@@ -83,9 +87,17 @@ export const updateCurrentlySelectedRuleErrors = (prevState, action) => {
 
 export const clearCurrentlySelectedRuleAndConfig = (prevState) => {
   prevState.rules.currentlySelectedRule = {
+    ...prevState.rules.currentlySelectedRule,
     config: false,
     data: false,
     hasUnsavedChanges: false,
+  };
+};
+
+export const closeCurrentlySelectedRuleDetailsPanel = (prevState) => {
+  prevState.rules.currentlySelectedRule = {
+    ...prevState.rules.currentlySelectedRule,
+    showDetailsPanel: false,
   };
 };
 
@@ -106,7 +118,7 @@ export const updateRulePairAtGivenPath = (prevState, action) => {
   const { pairIndex, updates = {}, triggerUnsavedChangesIndication = true } = action.payload;
 
   for (const [modificationPath, value] of Object.entries(updates)) {
-    set(prevState.rules.currentlySelectedRule.data?.pairs[pairIndex], getFilterObjectPath(modificationPath), value);
+    set(prevState.rules.currentlySelectedRule.data?.pairs?.[pairIndex], getFilterObjectPath(modificationPath), value);
   }
 
   if (triggerUnsavedChangesIndication) {
@@ -133,4 +145,13 @@ export const addValueInRulePairArray = (prevState, action) => {
   set(prevState.rules.currentlySelectedRule.data.pairs[pairIndex], arrayPath, [...(targetArray || []), value]);
 
   prevState.rules.currentlySelectedRule.hasUnsavedChanges = true;
+
+  // Don't block navigation when its initial state
+  if (
+    (prevState.rules.currentlySelectedRule?.data?.pairs?.length === 1 &&
+      prevState.rules.currentlySelectedRule?.data?.pairs?.[0]?.modifications?.length === 1) ||
+    prevState.rules.currentlySelectedRule?.data?.pairs?.[0]?.scripts?.length === 1
+  ) {
+    prevState.rules.currentlySelectedRule.hasUnsavedChanges = false;
+  }
 };

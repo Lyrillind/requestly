@@ -1,7 +1,11 @@
-import { useEffect, useMemo } from "react";
-import { Row, Col, Layout, Divider, Tooltip } from "antd";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Row, Col, Layout, Divider, Tooltip, Button } from "antd";
 import { useDispatch, useSelector } from "react-redux";
-import { getGroupwiseRulesToPopulate } from "store/selectors";
+import {
+  getCurrentlySelectedRuleConfig,
+  getCurrentlySelectedRuleData,
+  getGroupwiseRulesToPopulate,
+} from "store/selectors";
 import { actions } from "store";
 import Status from "./ActionButtons/Status";
 import ActionButtons from "./ActionButtons";
@@ -21,12 +25,21 @@ import {
 import { getAllRecordsMap } from "store/features/rules/selectors";
 import { useRulesActionContext } from "features/rules/context/actions";
 import { RQButton } from "lib/design-system/components";
+import { useLocation, useNavigate } from "react-router-dom";
+import PATHS from "config/constants/sub/paths";
+import { trackSampleRuleCreateRuleClicked, trackSampleRuleTested } from "features/rules/analytics";
+import { RecordStatus } from "features/rules";
 
-const Header = ({ mode, location, currentlySelectedRuleData, currentlySelectedRuleConfig }) => {
+const Header = ({ mode, handleSeeLiveRuleDemoClick = () => {}, showEnableRuleTooltip = false }) => {
+  const navigate = useNavigate();
   const dispatch = useDispatch();
-
+  const location = useLocation();
+  const currentlySelectedRuleData = useSelector(getCurrentlySelectedRuleData);
+  const currentlySelectedRuleConfig = useSelector(getCurrentlySelectedRuleConfig);
   const groupwiseRulesToPopulate = useSelector(getGroupwiseRulesToPopulate);
   const allRecordsMap = useSelector(getAllRecordsMap);
+
+  const isSampleRule = currentlySelectedRuleData?.isSample;
 
   const { recordStatusToggleAction } = useRulesActionContext();
 
@@ -59,25 +72,20 @@ const Header = ({ mode, location, currentlySelectedRuleData, currentlySelectedRu
 
   return (
     <Layout.Header className="rule-editor-header" key={currentlySelectedRuleData.id}>
-      <Row wrap={false} align="middle" className="rule-editor-row">
-        <Col span={6}>
-          <Row wrap={false} align="middle">
-            <CloseButton mode={mode} ruleType={currentlySelectedRuleData?.ruleType} />
-            <div className="text-gray rule-editor-header-title">
-              {getRuleTitle(currentlySelectedRuleConfig.NAME, mode)}
-            </div>
-          </Row>
-        </Col>
-        <Col span={18} align="right" className="ml-auto rule-editor-header-actions-container">
-          <Row gutter={8} wrap={false} justify="end" align="middle">
-            <Col>
-              <HelpButton />
-            </Col>
-            <Col>
-              <Status location={location} />
-            </Col>
+      <div className="rule-editor-row">
+        <div className="rule-editor-title-info">
+          <CloseButton mode={mode} ruleType={currentlySelectedRuleData?.ruleType} />
+          <div className="text-gray rule-editor-header-title">
+            {getRuleTitle(currentlySelectedRuleConfig.NAME, mode)}
+          </div>
+        </div>
+
+        {isSampleRule ? (
+          <div className="ml-auto rule-editor-header-actions-container">
+            <Status isSampleRule showEnableRuleTooltip={showEnableRuleTooltip} />
+
             {isRuleGroupDisabled && (
-              <Col className="rule-editor-header-disabled-group-warning">
+              <div className="rule-editor-header-disabled-group-warning">
                 <Tooltip title="This rule won't execute because its parent group is disabled. Enable the group to run this rule.">
                   <WarningOutlined className="icon__wrapper" />
                   Group is disabled.{" "}
@@ -91,27 +99,62 @@ const Header = ({ mode, location, currentlySelectedRuleData, currentlySelectedRu
                     Enable now
                   </RQButton>
                 </Tooltip>
-              </Col>
+              </div>
             )}
-            <Col>
-              <PinButton rule={currentlySelectedRuleData} />
-            </Col>
+
             <Divider type="vertical" />
-            <Col>
-              <RuleOptions mode={mode} rule={currentlySelectedRuleData} />
-            </Col>
-            <Col>
-              <EditorGroupDropdown mode={mode} />
-            </Col>
-            <Col>
-              <TestRuleButton />
-            </Col>
-            <Col>
-              <ActionButtons location={location} />
-            </Col>
-          </Row>
-        </Col>
-      </Row>
+
+            <Button
+              onClick={() => {
+                trackSampleRuleCreateRuleClicked(currentlySelectedRuleData?.name, currentlySelectedRuleData?.ruleType);
+                navigate(`${PATHS.RULE_EDITOR.CREATE_RULE.ABSOLUTE}/${currentlySelectedRuleData?.ruleType}`);
+              }}
+            >
+              Create {currentlySelectedRuleConfig.NAME?.toLowerCase()} rule
+            </Button>
+
+            <Button type="primary" onClick={handleSeeLiveRuleDemoClick}>
+              See live rule demo
+            </Button>
+          </div>
+        ) : (
+          <div className="ml-auto rule-editor-header-actions-container">
+            <HelpButton />
+
+            <Status />
+
+            {isRuleGroupDisabled && (
+              <div className="rule-editor-header-disabled-group-warning">
+                <Tooltip title="This rule won't execute because its parent group is disabled. Enable the group to run this rule.">
+                  <WarningOutlined className="icon__wrapper" />
+                  Group is disabled.{" "}
+                  <RQButton
+                    type="link"
+                    size="small"
+                    onClick={() =>
+                      recordStatusToggleAction(normalizeRecord(allRecordsMap[currentlySelectedRuleData.groupId]))
+                    }
+                  >
+                    Enable now
+                  </RQButton>
+                </Tooltip>
+              </div>
+            )}
+
+            <PinButton rule={currentlySelectedRuleData} />
+
+            <Divider type="vertical" />
+
+            <RuleOptions mode={mode} rule={currentlySelectedRuleData} />
+
+            <EditorGroupDropdown mode={mode} />
+
+            <TestRuleButton />
+
+            <ActionButtons mode={mode} />
+          </div>
+        )}
+      </div>
     </Layout.Header>
   );
 };
